@@ -1,98 +1,144 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
+<FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:background="@color/background_dark"
     tools:context=".ui.browse.BrowseFragment">
 
-    <!-- Header: "Multimedia" title + Search icon -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- Layer 1: Root Categories View (horizontal cards)       -->
+    <!-- Uses LinearLayout with equal-weight spacers to center  -->
+    <!-- ═══════════════════════════════════════════════════════ -->
     <LinearLayout
+        android:id="@+id/category_scroll"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingHorizontal="@dimen/spacing_lg"
-        android:paddingVertical="@dimen/spacing_md">
+        android:layout_height="match_parent"
+        android:orientation="vertical">
 
-        <!-- Back button (hidden at root level) -->
-        <ImageButton
-            android:id="@+id/btn_back"
-            android:layout_width="@dimen/touch_target_min"
-            android:layout_height="@dimen/touch_target_min"
-            android:src="@android:drawable/ic_menu_revert"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Back"
-            android:visibility="gone"
-            android:scaleType="centerInside"
-            tools:visibility="visible" />
-
-        <TextView
-            android:id="@+id/text_title"
-            android:layout_width="0dp"
+        <!-- Header -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Multimedia"
-            android:textColor="@color/text_primary"
-            android:textSize="@dimen/text_title"
-            android:textStyle="bold" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="@dimen/spacing_lg"
+            android:paddingVertical="@dimen/spacing_sm">
 
-        <!-- Search icon -->
-        <ImageButton
-            android:id="@+id/btn_search"
-            android:layout_width="@dimen/touch_target_min"
-            android:layout_height="@dimen/touch_target_min"
-            android:src="@android:drawable/ic_menu_search"
-            android:background="@drawable/bg_category_card"
-            android:contentDescription="Search"
-            android:scaleType="centerInside"
-            android:padding="@dimen/spacing_md" />
+            <TextView
+                android:id="@+id/text_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Multimedia"
+                android:textColor="@color/text_primary"
+                android:textSize="@dimen/text_title"
+                android:textStyle="bold" />
+
+            <ImageButton
+                android:id="@+id/btn_search"
+                android:layout_width="@dimen/touch_target_min"
+                android:layout_height="@dimen/touch_target_min"
+                android:src="@android:drawable/ic_menu_search"
+                android:background="@drawable/bg_category_card"
+                android:contentDescription="Search"
+                android:scaleType="centerInside"
+                android:padding="@dimen/spacing_md" />
+        </LinearLayout>
+
+        <!-- Top spacer (pushes cards to center) -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <!-- Category Cards Row -->
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:scrollbars="none"
+            android:paddingHorizontal="@dimen/spacing_lg"
+            android:clipToPadding="false">
+
+            <LinearLayout
+                android:id="@+id/category_container"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal" />
+
+        </HorizontalScrollView>
+
+        <!-- Bottom spacer (pushes cards to center) -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
 
     </LinearLayout>
 
-    <!-- Category Cards (horizontal scroll - shown at root level) -->
-    <HorizontalScrollView
-        android:id="@+id/category_scroll"
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- Layer 2: Drill-down List View (albums, artists, etc.)  -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <LinearLayout
+        android:id="@+id/list_container"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:scrollbars="none"
-        android:paddingHorizontal="@dimen/spacing_md"
-        android:clipToPadding="false">
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:visibility="gone">
 
+        <!-- Header with back button -->
         <LinearLayout
-            android:id="@+id/category_container"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:paddingVertical="@dimen/spacing_md" />
+            android:paddingHorizontal="@dimen/spacing_lg"
+            android:paddingVertical="@dimen/spacing_sm">
 
-    </HorizontalScrollView>
+            <ImageButton
+                android:id="@+id/btn_back"
+                android:layout_width="@dimen/touch_target_min"
+                android:layout_height="@dimen/touch_target_min"
+                android:src="@android:drawable/ic_menu_revert"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Back"
+                android:scaleType="centerInside" />
 
-    <!-- List view (shown when drilling into a category) -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recycler_browse"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:clipToPadding="false"
-        android:paddingVertical="@dimen/spacing_sm"
-        android:visibility="gone" />
+            <TextView
+                android:id="@+id/text_list_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textColor="@color/text_primary"
+                android:textSize="@dimen/text_title"
+                android:textStyle="bold"
+                android:paddingStart="@dimen/spacing_sm"
+                tools:text="Albums" />
 
-    <!-- Empty State -->
-    <TextView
-        android:id="@+id/text_empty"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:gravity="center"
-        android:text="@string/no_music_found"
-        android:textColor="@color/text_tertiary"
-        android:textSize="@dimen/text_subtitle"
-        android:visibility="gone"
-        tools:visibility="gone" />
+        </LinearLayout>
 
-</LinearLayout>
+        <!-- List -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recycler_browse"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:clipToPadding="false"
+            android:paddingVertical="@dimen/spacing_sm" />
+
+        <!-- Empty State -->
+        <TextView
+            android:id="@+id/text_empty"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="@string/no_music_found"
+            android:textColor="@color/text_tertiary"
+            android:textSize="@dimen/text_subtitle"
+            android:visibility="gone" />
+
+    </LinearLayout>
+
+</FrameLayout>

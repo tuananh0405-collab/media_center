@@ -55,12 +55,13 @@ class NowPlayingFragment : Fragment() {
         super.onResume()
         handler.post(positionUpdater)
         // Register listener for state changes
-        MusicService.instance?.playbackManager?.listener = playbackListener
+        MusicService.instance?.playbackManager?.addPlaybackListener(playbackListener)
     }
 
     override fun onPause() {
         super.onPause()
         handler.removeCallbacks(positionUpdater)
+        MusicService.instance?.playbackManager?.removePlaybackListener(playbackListener)
     }
 
     private fun setupControls() {

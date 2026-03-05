@@ -1,17 +1,12 @@
 package com.anhvt86.mediacenter.ui
 
-import android.Manifest
 import android.content.ComponentName
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.View
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import com.anhvt86.mediacenter.MediaCenterApp
 import com.anhvt86.mediacenter.R
 import com.anhvt86.mediacenter.data.local.entity.MediaItem
@@ -34,26 +29,13 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
 
-    private val permissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) {
-            Log.d(TAG, "Storage permission granted")
-            onPermissionGranted()
-        } else {
-            Log.w(TAG, "Storage permission denied")
-        }
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Start MusicService
+        // Start MusicService (which triggers the API fetch internally)
         startService(Intent(this, MusicService::class.java))
-
-        checkAndRequestPermissions()
 
         if (savedInstanceState == null) {
             supportFragmentManager.beginTransaction()
@@ -67,29 +49,13 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         // Register for playback state updates to update mini-player
-        MusicService.instance?.playbackManager?.listener = miniPlayerListener
+        MusicService.instance?.playbackManager?.addPlaybackListener(miniPlayerListener)
         updateMiniPlayer()
     }
 
-    private fun checkAndRequestPermissions() {
-        val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            Manifest.permission.READ_MEDIA_AUDIO
-        } else {
-            Manifest.permission.READ_EXTERNAL_STORAGE
-        }
-
-        if (ContextCompat.checkSelfPermission(this, permission) ==
-            PackageManager.PERMISSION_GRANTED
-        ) {
-            onPermissionGranted()
-        } else {
-            permissionLauncher.launch(permission)
-        }
-    }
-
-    private fun onPermissionGranted() {
-        val app = application as MediaCenterApp
-        app.repository.triggerScan()
+    override fun onPause() {
+        super.onPause()
+        MusicService.instance?.playbackManager?.removePlaybackListener(miniPlayerListener)
     }
 
     private fun setupMiniPlayer() {
