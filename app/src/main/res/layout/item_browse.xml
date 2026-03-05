@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="@dimen/spacing_md"
+    android:layout_marginVertical="@dimen/spacing_xs"
+    app:cardBackgroundColor="@color/card_background"
+    app:cardCornerRadius="@dimen/card_corner_radius"
+    app:cardElevation="2dp"
+    app:rippleColor="@color/ripple_color">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/touch_target_min"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="@dimen/spacing_md">
+
+        <!-- Album Art (for tracks) -->
+        <ImageView
+            android:id="@+id/image_art"
+            android:layout_width="@dimen/album_art_small"
+            android:layout_height="@dimen/album_art_small"
+            android:scaleType="centerCrop"
+            android:visibility="gone"
+            android:contentDescription="Album Art"
+            tools:visibility="visible"
+            tools:src="@drawable/ic_launcher_foreground" />
+
+        <!-- Category Icon (for categories) -->
+        <ImageView
+            android:id="@+id/icon_category"
+            android:layout_width="@dimen/album_art_small"
+            android:layout_height="@dimen/album_art_small"
+            android:scaleType="center"
+            android:src="@android:drawable/ic_menu_gallery"
+            android:visibility="gone"
+            android:contentDescription="Category"
+            tools:visibility="visible" />
+
+        <!-- Text Container -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:paddingHorizontal="@dimen/spacing_md">
+
+            <TextView
+                android:id="@+id/text_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/text_primary"
+                android:textSize="@dimen/text_body"
+                android:ellipsize="end"
+                android:maxLines="1"
+                tools:text="Song Title" />
+
+            <TextView
+                android:id="@+id/text_subtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/text_secondary"
+                android:textSize="@dimen/text_caption"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:visibility="gone"
+                tools:text="Artist Name • Album Name"
+                tools:visibility="visible" />
+
+        </LinearLayout>
+
+        <!-- Chevron Arrow (for browsable items) -->
+        <ImageView
+            android:id="@+id/icon_chevron"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@android:drawable/ic_media_play"
+            android:scaleType="center"
+            android:visibility="gone"
+            android:contentDescription="Browse"
+            tools:visibility="visible" />
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

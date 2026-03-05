@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary Dark Palette -->
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <!-- Automotive Dark Theme Colors -->
+    <color name="surface_dark">#FF1A1A2E</color>
+    <color name="surface_variant">#FF16213E</color>
+    <color name="background_dark">#FF0F0F1A</color>
+    <color name="card_background">#FF1E1E32</color>
+
+    <!-- Accent Colors (Cyan/Teal) -->
+    <color name="primary">#FF00D4AA</color>
+    <color name="primary_variant">#FF00A388</color>
+    <color name="secondary">#FF00BCD4</color>
+    <color name="secondary_variant">#FF0097A7</color>
+    <color name="accent_glow">#4D00D4AA</color>
+
+    <!-- Text Colors -->
+    <color name="text_primary">#FFFAFAFA</color>
+    <color name="text_secondary">#B3FAFAFA</color>
+    <color name="text_tertiary">#66FAFAFA</color>
+    <color name="text_on_primary">#FF0F0F1A</color>
+
+    <!-- Control Colors -->
+    <color name="progress_track">#33FAFAFA</color>
+    <color name="progress_indicator">#FF00D4AA</color>
+    <color name="divider">#1AFAFAFA</color>
+    <color name="ripple_color">#2600D4AA</color>
+
+    <!-- Status Colors -->
+    <color name="error">#FFCF6679</color>
+    <color name="warning">#FFFFAB40</color>
+    <color name="success">#FF69F0AE</color>
+</resources>

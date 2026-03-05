@@ -1,0 +1,47 @@
+<resources>
+    <string name="app_name">MediaCenter</string>
+
+    <!-- Browse Categories -->
+    <string name="category_albums">Albums</string>
+    <string name="category_artists">Artists</string>
+    <string name="category_all_songs">All Songs</string>
+    <string name="category_playlists">Playlists</string>
+
+    <!-- Playback -->
+    <string name="now_playing">Now Playing</string>
+    <string name="play">Play</string>
+    <string name="pause">Pause</string>
+    <string name="skip_next">Next</string>
+    <string name="skip_previous">Previous</string>
+    <string name="shuffle">Shuffle</string>
+    <string name="repeat">Repeat</string>
+    <string name="stop">Stop</string>
+
+    <!-- Search -->
+    <string name="search_hint">Search songs, albums, artists…</string>
+    <string name="no_results">No results found</string>
+
+    <!-- Media Scanner -->
+    <string name="scanning_media">Scanning for audio files…</string>
+    <string name="scan_complete">Media scan complete</string>
+    <string name="no_music_found">No music files found on this device</string>
+
+    <!-- Diagnostics -->
+    <string name="diagnostics">Diagnostics</string>
+    <string name="total_play_time">Total Play Time</string>
+    <string name="total_tracks_played">Tracks Played</string>
+    <string name="total_skips">Total Skips</string>
+
+    <!-- Permissions -->
+    <string name="perm_diagnostics_label">Diagnostics Access</string>
+    <string name="perm_diagnostics_desc">Allows binding to the diagnostics service to read playback statistics</string>
+
+    <!-- General -->
+    <string name="unknown_artist">Unknown Artist</string>
+    <string name="unknown_album">Unknown Album</string>
+    <string name="unknown_title">Unknown Track</string>
+
+    <!-- Notification -->
+    <string name="playback_channel_name">Media Playback</string>
+    <string name="playback_channel_description">Controls for media playback</string>
+</resources>

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Permissions -->
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- Automotive feature declaration -->
+    <uses-feature
+        android:name="android.hardware.type.automotive"
+        android:required="true" />
+
+    <!-- Custom signature-level permission for diagnostics service -->
+    <permission
+        android:name="com.anhvt86.mediacenter.permission.BIND_DIAGNOSTICS"
+        android:protectionLevel="signature"
+        android:label="@string/perm_diagnostics_label"
+        android:description="@string/perm_diagnostics_desc" />
+
+    <application
+        android:name=".MediaCenterApp"
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.MediaCenter">
+
+        <!-- Main Activity -->
+        <activity
+            android:name=".ui.MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- Mark as automotive media app -->
+            <meta-data
+                android:name="com.android.automotive"
+                android:value="true" />
+        </activity>
+
+        <!-- Media Browser Service -->
+        <service
+            android:name=".service.MusicService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.media.browse.MediaBrowserService" />
+            </intent-filter>
+        </service>
+
+        <!-- Diagnostics AIDL Service -->
+        <service
+            android:name=".service.DiagnosticsService"
+            android:exported="true"
+            android:permission="com.anhvt86.mediacenter.permission.BIND_DIAGNOSTICS">
+            <intent-filter>
+                <action android:name="com.anhvt86.mediacenter.BIND_DIAGNOSTICS" />
+            </intent-filter>
+        </service>
+
+        <!-- Automotive app descriptor -->
+        <meta-data
+            android:name="com.google.android.gms.car.application"
+            android:resource="@xml/automotive_app_desc" />
+
+    </application>
+
+</manifest>
