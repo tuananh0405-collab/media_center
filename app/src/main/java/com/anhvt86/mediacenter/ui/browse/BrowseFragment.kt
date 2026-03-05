@@ -4,7 +4,6 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
@@ -20,6 +19,13 @@ import com.anhvt86.mediacenter.ui.search.SearchFragment
  * Browse screen matching the design mockup.
  * - Root level: horizontal scrolling category cards (Albums, Artists, Playlists, All Songs)
  * - Drill-down: vertical list of albums/artists/tracks
+ *
+ * Uses two stacked layers:
+ *   Layer 1 (category_scroll) = root categories view with centered cards
+ *   Layer 2 (list_container) = drill-down list with back button
+ *
+ * Observers are registered ONCE in observeData() and react to ViewModel state changes,
+ * preventing LiveData observer leaks.
  */
 class BrowseFragment : Fragment() {
 
@@ -81,7 +87,6 @@ class BrowseFragment : Fragment() {
                 .inflate(R.layout.item_category_card, container, false)
 
             cardView.findViewById<TextView>(R.id.text_category_name).text = cat.title
-            // Category images will be placeholder for now (dark card)
             cardView.setOnClickListener {
                 navigateToCategory(cat.id)
             }
@@ -103,6 +108,10 @@ class BrowseFragment : Fragment() {
     }
 
     private fun observeData() {
+        // All observers are registered ONCE here with viewLifecycleOwner.
+        // They react to ViewModel state changes (via switchMap) instead of
+        // creating new observers on each click.
+
         viewModel.allSongs.observe(viewLifecycleOwner) { songs ->
             if (currentCategory == "ALL_SONGS") {
                 adapter.submitList(songs.map {
@@ -130,30 +139,83 @@ class BrowseFragment : Fragment() {
                 updateEmptyState(artists.isEmpty())
             }
         }
+
+        // Observe album detail songs (reactive via switchMap)
+        viewModel.albumSongs.observe(viewLifecycleOwner) { songs ->
+            if (currentCategory == "ALBUM_DETAIL") {
+                adapter.submitList(songs.map {
+                    BrowseItem(it.id.toString(), it.title, it.artist,
+                        it.albumArtUri, BrowseItem.Type.TRACK)
+                })
+                updateEmptyState(songs.isEmpty())
+            }
+        }
+
+        // Observe artist detail songs (reactive via switchMap)
+        viewModel.artistSongs.observe(viewLifecycleOwner) { songs ->
+            if (currentCategory == "ARTIST_DETAIL") {
+                adapter.submitList(songs.map {
+                    BrowseItem(it.id.toString(), it.title,
+                        "${it.artist} • ${it.album}", it.albumArtUri, BrowseItem.Type.TRACK)
+                })
+                updateEmptyState(songs.isEmpty())
+            }
+        }
     }
+
+    // ── Navigation ───────────────────────────────────────────────
 
     private fun showCategories() {
         currentCategory = null
-        binding.textTitle.text = "Multimedia"
-        binding.btnBack.visibility = View.GONE
-        binding.btnSearch.visibility = View.VISIBLE
+        // Show Layer 1 (root categories), hide Layer 2 (list)
         binding.categoryScroll.visibility = View.VISIBLE
-        binding.recyclerBrowse.visibility = View.GONE
-        binding.textEmpty.visibility = View.GONE
+        binding.listContainer.visibility = View.GONE
     }
 
     private fun navigateToCategory(categoryId: String) {
         currentCategory = categoryId
-        binding.btnBack.visibility = View.VISIBLE
-        binding.btnSearch.visibility = View.GONE
+        // Hide Layer 1, show Layer 2
         binding.categoryScroll.visibility = View.GONE
-        binding.recyclerBrowse.visibility = View.VISIBLE
+        binding.listContainer.visibility = View.VISIBLE
 
+        binding.textListTitle.text = when (categoryId) {
+            "ALBUMS" -> getString(R.string.category_albums)
+            "ARTISTS" -> getString(R.string.category_artists)
+            "ALL_SONGS" -> getString(R.string.category_all_songs)
+            "PLAYLISTS" -> getString(R.string.category_playlists)
+            else -> categoryId
+        }
+
+        // Show empty state initially, data will arrive via LiveData
+        binding.textEmpty.visibility = View.GONE
+        binding.recyclerBrowse.visibility = View.VISIBLE
+        
+        // Force update with existing data if it was already loaded
         when (categoryId) {
-            "ALBUMS" -> binding.textTitle.text = getString(R.string.category_albums)
-            "ARTISTS" -> binding.textTitle.text = getString(R.string.category_artists)
-            "ALL_SONGS" -> binding.textTitle.text = getString(R.string.category_all_songs)
-            "PLAYLISTS" -> binding.textTitle.text = getString(R.string.category_playlists)
+            "ALL_SONGS" -> viewModel.allSongs.value?.let { songs ->
+                adapter.submitList(songs.map {
+                    BrowseItem(it.id.toString(), it.title, "${it.artist} • ${it.album}",
+                        it.albumArtUri, BrowseItem.Type.TRACK)
+                })
+                updateEmptyState(songs.isEmpty())
+            }
+            "ALBUMS" -> viewModel.albums.value?.let { albums ->
+                adapter.submitList(albums.map {
+                    BrowseItem("ALBUM:$it", it, null, null, BrowseItem.Type.CATEGORY)
+                })
+                updateEmptyState(albums.isEmpty())
+            }
+            "ARTISTS" -> viewModel.artists.value?.let { artists ->
+                adapter.submitList(artists.map {
+                    BrowseItem("ARTIST:$it", it, null, null, BrowseItem.Type.CATEGORY)
+                })
+                updateEmptyState(artists.isEmpty())
+            }
+            "PLAYLISTS" -> {
+                // Not yet implemented in observeData, but good place to prepare
+                adapter.submitList(emptyList())
+                updateEmptyState(true)
+            }
         }
     }
 
@@ -162,33 +224,18 @@ class BrowseFragment : Fragment() {
             item.id.startsWith("ALBUM:") -> {
                 val albumName = item.id.removePrefix("ALBUM:")
                 currentCategory = "ALBUM_DETAIL"
-                binding.textTitle.text = albumName
-                viewModel.getSongsByAlbum(albumName).observe(viewLifecycleOwner) { songs ->
-                    if (currentCategory == "ALBUM_DETAIL") {
-                        adapter.submitList(songs.map {
-                            BrowseItem(it.id.toString(), it.title, it.artist,
-                                it.albumArtUri, BrowseItem.Type.TRACK)
-                        })
-                        updateEmptyState(songs.isEmpty())
-                    }
-                }
+                binding.textListTitle.text = albumName
+                // Trigger reactive load via switchMap — no new observer registered
+                viewModel.selectAlbum(albumName)
             }
             item.id.startsWith("ARTIST:") -> {
                 val artistName = item.id.removePrefix("ARTIST:")
                 currentCategory = "ARTIST_DETAIL"
-                binding.textTitle.text = artistName
-                viewModel.getSongsByArtist(artistName).observe(viewLifecycleOwner) { songs ->
-                    if (currentCategory == "ARTIST_DETAIL") {
-                        adapter.submitList(songs.map {
-                            BrowseItem(it.id.toString(), it.title,
-                                "${it.artist} • ${it.album}", it.albumArtUri, BrowseItem.Type.TRACK)
-                        })
-                        updateEmptyState(songs.isEmpty())
-                    }
-                }
+                binding.textListTitle.text = artistName
+                // Trigger reactive load via switchMap — no new observer registered
+                viewModel.selectArtist(artistName)
             }
             item.type == BrowseItem.Type.TRACK -> {
-                // Play the track and navigate to Now Playing
                 val pm = MusicService.instance?.playbackManager ?: return
                 viewModel.allSongs.value?.let { songs ->
                     val index = songs.indexOfFirst { it.id.toString() == item.id }

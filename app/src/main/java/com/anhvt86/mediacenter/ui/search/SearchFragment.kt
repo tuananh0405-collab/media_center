@@ -1,6 +1,5 @@
 package com.anhvt86.mediacenter.ui.search
 
-import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -9,6 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.anhvt86.mediacenter.MediaCenterApp
 import com.anhvt86.mediacenter.R
@@ -17,10 +17,16 @@ import com.anhvt86.mediacenter.service.MusicService
 import com.anhvt86.mediacenter.ui.browse.BrowseAdapter
 import com.anhvt86.mediacenter.ui.browse.BrowseItem
 import com.anhvt86.mediacenter.ui.browse.BrowseViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * Search screen with teal-bordered search input and results list.
  * Matches the design mockup.
+ *
+ * Uses debounced search (300ms) and a single switchMap-based observer
+ * to prevent LiveData leaks and excessive queries.
  */
 class SearchFragment : Fragment() {
 
@@ -29,6 +35,8 @@ class SearchFragment : Fragment() {
 
     private lateinit var viewModel: BrowseViewModel
     private lateinit var adapter: BrowseAdapter
+
+    private var searchJob: Job? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -48,6 +56,7 @@ class SearchFragment : Fragment() {
 
         setupRecyclerView()
         setupSearchInput()
+        observeSearchResults()
 
         binding.btnBack.setOnClickListener {
             parentFragmentManager.popBackStack()
@@ -57,13 +66,12 @@ class SearchFragment : Fragment() {
     private fun setupRecyclerView() {
         adapter = BrowseAdapter { item ->
             if (item.type == BrowseItem.Type.TRACK) {
-                // Play the track
+                // Play the track using cached allSongs value (no new observer!)
                 val pm = MusicService.instance?.playbackManager ?: return@BrowseAdapter
-                viewModel.allSongs.observe(viewLifecycleOwner) { songs ->
-                    val index = songs.indexOfFirst { it.id.toString() == item.id }
-                    if (index >= 0) {
-                        pm.setQueueAndPlay(songs, index)
-                    }
+                val songs = viewModel.allSongs.value ?: return@BrowseAdapter
+                val index = songs.indexOfFirst { it.id.toString() == item.id }
+                if (index >= 0) {
+                    pm.setQueueAndPlay(songs, index)
                 }
             }
         }
@@ -73,33 +81,12 @@ class SearchFragment : Fragment() {
         }
     }
 
-    private fun setupSearchInput() {
-        binding.editSearch.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: Editable?) {
-                val query = s?.toString()?.trim() ?: ""
-                binding.btnClear.visibility = if (query.isNotEmpty()) View.VISIBLE else View.GONE
-
-                if (query.isNotEmpty()) {
-                    performSearch(query)
-                } else {
-                    adapter.submitList(emptyList())
-                    binding.textNoResults.visibility = View.GONE
-                }
-            }
-        })
-
-        binding.btnClear.setOnClickListener {
-            binding.editSearch.text.clear()
-        }
-
-        // Request focus on the search input
-        binding.editSearch.requestFocus()
-    }
-
-    private fun performSearch(query: String) {
-        viewModel.search(query).observe(viewLifecycleOwner) { results ->
+    /**
+     * Observe search results via switchMap — registered ONCE,
+     * reacts automatically when viewModel.setSearchQuery() is called.
+     */
+    private fun observeSearchResults() {
+        viewModel.searchResults.observe(viewLifecycleOwner) { results ->
             val items = results.map {
                 BrowseItem(
                     id = it.id.toString(),
@@ -117,8 +104,40 @@ class SearchFragment : Fragment() {
         }
     }
 
+    private fun setupSearchInput() {
+        binding.editSearch.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                val query = s?.toString()?.trim() ?: ""
+                binding.btnClear.visibility = if (query.isNotEmpty()) View.VISIBLE else View.GONE
+
+                if (query.isNotEmpty()) {
+                    // Debounce: cancel previous search and wait 300ms before firing
+                    searchJob?.cancel()
+                    searchJob = viewLifecycleOwner.lifecycleScope.launch {
+                        delay(300)
+                        viewModel.setSearchQuery(query)
+                    }
+                } else {
+                    searchJob?.cancel()
+                    adapter.submitList(emptyList())
+                    binding.textNoResults.visibility = View.GONE
+                }
+            }
+        })
+
+        binding.btnClear.setOnClickListener {
+            binding.editSearch.text.clear()
+        }
+
+        // Request focus on the search input
+        binding.editSearch.requestFocus()
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
+        searchJob?.cancel()
         _binding = null
     }
 }
