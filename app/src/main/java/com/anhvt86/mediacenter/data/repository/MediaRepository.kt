@@ -1,20 +1,22 @@
 package com.anhvt86.mediacenter.data.repository
 
 import android.content.Context
+import android.util.Log
 import androidx.lifecycle.LiveData
-import androidx.work.*
 import com.anhvt86.mediacenter.data.local.MediaDatabase
 import com.anhvt86.mediacenter.data.local.dao.MediaDao
 import com.anhvt86.mediacenter.data.local.dao.PlaylistDao
 import com.anhvt86.mediacenter.data.local.entity.MediaItem
 import com.anhvt86.mediacenter.data.local.entity.Playlist
 import com.anhvt86.mediacenter.data.local.entity.PlaylistTrackCrossRef
-import com.anhvt86.mediacenter.data.scanner.ScanWorker
-import java.util.concurrent.TimeUnit
+import com.anhvt86.mediacenter.data.remote.RetrofitClient
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Single source of truth for media data.
- * Coordinates between Room database (via DAOs) and the background media scanner.
+ * Coordinates between Room database (via DAOs) and the Deezer API.
  * Provides LiveData streams for UI observation and suspend functions for one-shot queries.
  */
 class MediaRepository(context: Context) {
@@ -22,7 +24,17 @@ class MediaRepository(context: Context) {
     private val database = MediaDatabase.getInstance(context)
     private val mediaDao: MediaDao = database.mediaDao()
     private val playlistDao: PlaylistDao = database.playlistDao()
-    private val workManager = WorkManager.getInstance(context)
+
+    // ── Scan State ─────────────────────────────────────────────────
+    sealed class ScanState {
+        object Idle : ScanState()
+        object Loading : ScanState()
+        data class Success(val count: Int) : ScanState()
+        data class Error(val message: String) : ScanState()
+    }
+
+    private val _scanState = MutableStateFlow<ScanState>(ScanState.Idle)
+    val scanState: StateFlow<ScanState> = _scanState.asStateFlow()
 
     // ── All Songs ──────────────────────────────────────────────────
     fun getAllSongs(): LiveData<List<MediaItem>> = mediaDao.getAllSongs()
@@ -53,41 +65,58 @@ class MediaRepository(context: Context) {
     fun getTracksInPlaylist(playlistId: Long): LiveData<List<MediaItem>> =
         playlistDao.getTracksInPlaylist(playlistId)
 
-    // ── Media Scanning ─────────────────────────────────────────────
+    // ── Media Fetching (API) ───────────────────────────────────────
 
     /**
-     * Trigger a one-time media scan immediately.
+     * Fetch music from Deezer API instead of scanning local storage.
+     * This is now a suspend function — callers must invoke it from a coroutine scope
+     * they own (e.g. serviceScope, viewModelScope), ensuring structured concurrency.
      */
-    fun triggerScan() {
-        val scanRequest = OneTimeWorkRequestBuilder<ScanWorker>()
-            .addTag(ScanWorker.TAG)
-            .build()
-        workManager.enqueueUniqueWork(
-            ScanWorker.WORK_NAME,
-            ExistingWorkPolicy.KEEP,
-            scanRequest
-        )
-    }
+    suspend fun triggerScan() {
+        _scanState.value = ScanState.Loading
+        try {
+            Log.d("MediaRepository", "Fetching music from Deezer API...")
+            val response = RetrofitClient.api.getChartTracks(limit = 40)
+            val tracks = response.data
 
-    /**
-     * Schedule periodic media scanning (every 6 hours).
-     */
-    fun schedulePeriodicScan() {
-        val periodicRequest = PeriodicWorkRequestBuilder<ScanWorker>(
-            6, TimeUnit.HOURS
-        )
-            .addTag(ScanWorker.TAG)
-            .setConstraints(
-                Constraints.Builder()
-                    .setRequiresStorageNotLow(true)
-                    .build()
-            )
-            .build()
-        workManager.enqueueUniquePeriodicWork(
-            "${ScanWorker.WORK_NAME}_periodic",
-            ExistingPeriodicWorkPolicy.KEEP,
-            periodicRequest
-        )
+            // Fetch existing tracks from the database to prevent duplicates
+            val existingTracks = mediaDao.getAllSongsList().associateBy { it.mediaStoreId }
+
+            val mediaItems = tracks.map { track ->
+                val existing = existingTracks[track.id]
+                if (existing != null) {
+                    // Reuse the primary key to update the existing track instead of creating a new duplicate
+                    existing.copy(
+                        title = track.title,
+                        artist = track.artist.name,
+                        album = track.album.title,
+                        duration = track.durationSeconds * 1000,
+                        albumArtUri = track.album.coverXl ?: track.artist.pictureMedium,
+                        filePath = track.previewUrl
+                    )
+                } else {
+                    MediaItem(
+                        title = track.title,
+                        artist = track.artist.name,
+                        album = track.album.title,
+                        duration = track.durationSeconds * 1000,
+                        albumArtUri = track.album.coverXl ?: track.artist.pictureMedium,
+                        filePath = track.previewUrl,
+                        dateAdded = System.currentTimeMillis(),
+                        mediaStoreId = track.id
+                    )
+                }
+            }
+
+            if (mediaItems.isNotEmpty()) {
+                mediaDao.insertAll(mediaItems)
+                Log.d("MediaRepository", "Saved ${mediaItems.size} tracks to database")
+            }
+            _scanState.value = ScanState.Success(mediaItems.size)
+        } catch (e: Exception) {
+            Log.e("MediaRepository", "Failed to fetch music from API", e)
+            _scanState.value = ScanState.Error(e.message ?: "Unknown error")
+        }
     }
 
     // ── Count ──────────────────────────────────────────────────────

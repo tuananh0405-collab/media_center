@@ -15,9 +15,5 @@ class MediaCenterApp : Application() {
     override fun onCreate() {
         super.onCreate()
         repository = MediaRepository(this)
-
-        // Trigger initial scan and schedule periodic scans
-        repository.triggerScan()
-        repository.schedulePeriodicScan()
     }
 }
