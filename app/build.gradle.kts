@@ -31,6 +31,7 @@ android {
     buildFeatures {
         viewBinding = true
         aidl = true
+        buildConfig = true
     }
 
     compileOptions {
@@ -81,6 +82,12 @@ dependencies {
 
     // WorkManager
     implementation(libs.workmanager)
+
+    // Networking
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.gson)
+    implementation(libs.okhttp)
+    implementation(libs.okhttp.logging)
 
     // Testing
     testImplementation(libs.junit)

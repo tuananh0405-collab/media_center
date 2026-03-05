@@ -10,7 +10,6 @@ import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import android.util.Log
 import androidx.media.MediaBrowserServiceCompat
-import com.anhvt86.mediacenter.data.local.MediaDatabase
 import com.anhvt86.mediacenter.data.local.entity.MediaItem
 import com.anhvt86.mediacenter.data.repository.MediaRepository
 import kotlinx.coroutines.*
@@ -52,7 +51,6 @@ class MusicService : MediaBrowserServiceCompat() {
         // Initialize PlaybackManager
         playbackManager = PlaybackManager(applicationContext)
         playbackManager.initialize()
-        playbackManager.listener = playbackListener
 
         // Initialize MediaSession
         mediaSession = MediaSessionCompat(this, TAG).apply {
@@ -61,11 +59,15 @@ class MusicService : MediaBrowserServiceCompat() {
             isActive = true
         }
 
+        playbackManager.addPlaybackListener(playbackListener)
+
         // Set the session token so clients can connect
         sessionToken = mediaSession.sessionToken
 
-        // Trigger initial media scan
-        repository.triggerScan()
+        // Trigger initial media scan (using serviceScope for structured concurrency)
+        serviceScope.launch(Dispatchers.IO) {
+            repository.triggerScan()
+        }
     }
 
     override fun onDestroy() {
@@ -198,7 +200,7 @@ class MusicService : MediaBrowserServiceCompat() {
         }
     }
 
-    // ── Tree Builders ─────────────────────────────────────────────
+    // ── Tree Builders (now using repository instead of direct DB access) ──
 
     private fun buildRootItems(): List<MediaBrowserCompat.MediaItem> {
         return BrowseTree.getRootCategories().map { categoryId ->
@@ -214,8 +216,7 @@ class MusicService : MediaBrowserServiceCompat() {
     }
 
     private suspend fun buildAlbumItems(): List<MediaBrowserCompat.MediaItem> {
-        val db = MediaDatabase.getInstance(applicationContext)
-        val albums = db.mediaDao().getAllSongsList()
+        val albums = repository.getAllSongsList()
             .map { it.album }
             .distinct()
             .sorted()
@@ -233,8 +234,7 @@ class MusicService : MediaBrowserServiceCompat() {
     }
 
     private suspend fun buildArtistItems(): List<MediaBrowserCompat.MediaItem> {
-        val db = MediaDatabase.getInstance(applicationContext)
-        val artists = db.mediaDao().getAllSongsList()
+        val artists = repository.getAllSongsList()
             .map { it.artist }
             .distinct()
             .sorted()
@@ -252,18 +252,15 @@ class MusicService : MediaBrowserServiceCompat() {
     }
 
     private suspend fun buildAllSongItems(): List<MediaBrowserCompat.MediaItem> {
-        val db = MediaDatabase.getInstance(applicationContext)
-        return db.mediaDao().getAllSongsList().map { it.toBrowserMediaItem() }
+        return repository.getAllSongsList().map { it.toBrowserMediaItem() }
     }
 
     private suspend fun buildSongsForAlbum(album: String): List<MediaBrowserCompat.MediaItem> {
-        val db = MediaDatabase.getInstance(applicationContext)
-        return db.mediaDao().getSongsByAlbumList(album).map { it.toBrowserMediaItem() }
+        return repository.getSongsByAlbumList(album).map { it.toBrowserMediaItem() }
     }
 
     private suspend fun buildSongsForArtist(artist: String): List<MediaBrowserCompat.MediaItem> {
-        val db = MediaDatabase.getInstance(applicationContext)
-        return db.mediaDao().getSongsByArtistList(artist).map { it.toBrowserMediaItem() }
+        return repository.getSongsByArtistList(artist).map { it.toBrowserMediaItem() }
     }
 
     private fun MediaItem.toBrowserMediaItem(): MediaBrowserCompat.MediaItem {
@@ -319,7 +316,7 @@ class MusicService : MediaBrowserServiceCompat() {
                 val trackId = id.removePrefix(BrowseTree.TRACK_PREFIX).toLongOrNull() ?: return
                 serviceScope.launch {
                     val allSongs = withContext(Dispatchers.IO) {
-                        MediaDatabase.getInstance(applicationContext).mediaDao().getAllSongsList()
+                        repository.getAllSongsList()
                     }
                     val index = allSongs.indexOfFirst { it.id == trackId }
                     if (index >= 0) {
