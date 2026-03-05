@@ -2,18 +2,11 @@ package com.anhvt86.mediacenter
 
 import android.app.Application
 import com.anhvt86.mediacenter.data.repository.MediaRepository
+import dagger.hilt.android.HiltAndroidApp
 
 /**
  * Application class for MediaCenter.
- * Initializes the MediaRepository and triggers the first media scan.
+ * Annotated with @HiltAndroidApp to trigger Hilt code generation.
  */
-class MediaCenterApp : Application() {
-
-    lateinit var repository: MediaRepository
-        private set
-
-    override fun onCreate() {
-        super.onCreate()
-        repository = MediaRepository(this)
-    }
-}
+@HiltAndroidApp
+class MediaCenterApp : Application()
