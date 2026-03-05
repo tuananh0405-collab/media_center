@@ -5,6 +5,8 @@ import android.content.Intent
 import android.os.IBinder
 import android.util.Log
 import com.anhvt86.mediacenter.IDiagnosticsService
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Bound service that exposes playback diagnostics via AIDL.
@@ -20,29 +22,31 @@ class DiagnosticsService : Service() {
         private const val MAX_ERRORS = 20
     }
 
-    // ── Playback Statistics (in-memory, updated by MusicService) ──
-    // In a production app, these would be persisted or shared via a shared singleton.
-    // For this mock project, we use companion object state.
+    // ── Playback Statistics (thread-safe, updated by PlaybackManager) ──
     object Stats {
-        var totalPlayTimeMs: Long = 0L
-        var totalTracksPlayed: Int = 0
-        var totalSkips: Int = 0
-        var currentTrackInfo: String = ""
-        val recentErrors: MutableList<String> = mutableListOf()
+        val totalPlayTimeMs = AtomicLong(0L)
+        val totalTracksPlayed = AtomicInteger(0)
+        val totalSkips = AtomicInteger(0)
+        @Volatile var currentTrackInfo: String = ""
 
-        fun addError(error: String) {
-            recentErrors.add(0, error)
-            if (recentErrors.size > MAX_ERRORS) {
-                recentErrors.removeAt(recentErrors.lastIndex)
+        private val errorsLock = Any()
+        private val _recentErrors: MutableList<String> = mutableListOf()
+        val recentErrors: List<String>
+            get() = synchronized(errorsLock) { _recentErrors.toList() }
+
+        fun addError(error: String) = synchronized(errorsLock) {
+            _recentErrors.add(0, error)
+            if (_recentErrors.size > MAX_ERRORS) {
+                _recentErrors.removeAt(_recentErrors.lastIndex)
             }
         }
 
         fun reset() {
-            totalPlayTimeMs = 0L
-            totalTracksPlayed = 0
-            totalSkips = 0
+            totalPlayTimeMs.set(0L)
+            totalTracksPlayed.set(0)
+            totalSkips.set(0)
             currentTrackInfo = ""
-            recentErrors.clear()
+            synchronized(errorsLock) { _recentErrors.clear() }
         }
     }
 
@@ -51,18 +55,21 @@ class DiagnosticsService : Service() {
     private val binder = object : IDiagnosticsService.Stub() {
 
         override fun getTotalPlayTimeMs(): Long {
-            Log.d(TAG, "getTotalPlayTimeMs: ${Stats.totalPlayTimeMs}")
-            return Stats.totalPlayTimeMs
+            val value = Stats.totalPlayTimeMs.get()
+            Log.d(TAG, "getTotalPlayTimeMs: $value")
+            return value
         }
 
         override fun getTotalTracksPlayed(): Int {
-            Log.d(TAG, "getTotalTracksPlayed: ${Stats.totalTracksPlayed}")
-            return Stats.totalTracksPlayed
+            val value = Stats.totalTracksPlayed.get()
+            Log.d(TAG, "getTotalTracksPlayed: $value")
+            return value
         }
 
         override fun getTotalSkips(): Int {
-            Log.d(TAG, "getTotalSkips: ${Stats.totalSkips}")
-            return Stats.totalSkips
+            val value = Stats.totalSkips.get()
+            Log.d(TAG, "getTotalSkips: $value")
+            return value
         }
 
         override fun getCurrentTrackInfo(): String {
@@ -71,8 +78,9 @@ class DiagnosticsService : Service() {
         }
 
         override fun getRecentErrors(): List<String> {
-            Log.d(TAG, "getRecentErrors: ${Stats.recentErrors.size} errors")
-            return Stats.recentErrors.toList()
+            val errors = Stats.recentErrors
+            Log.d(TAG, "getRecentErrors: ${errors.size} errors")
+            return errors
         }
     }
 

@@ -5,7 +5,6 @@ import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.net.Uri
-import android.os.Build
 import android.util.Log
 import androidx.media3.common.MediaItem as ExoMediaItem
 import androidx.media3.common.Player
@@ -46,7 +45,29 @@ class PlaybackManager(private val context: Context) {
     enum class RepeatMode { OFF, ONE, ALL }
 
     // ── Listener ──────────────────────────────────────────────────
-    var listener: PlaybackListener? = null
+    private val listeners = mutableListOf<PlaybackListener>()
+
+    fun addPlaybackListener(l: PlaybackListener) {
+        if (!listeners.contains(l)) {
+            listeners.add(l)
+            // Dispatch current state to the new listener
+            l.onPlaybackStateChanged(isPlaying)
+            l.onTrackChanged(getCurrentTrack())
+            l.onShuffleChanged(shuffleEnabled)
+            l.onRepeatModeChanged(repeatMode)
+        }
+    }
+
+    fun removePlaybackListener(l: PlaybackListener) {
+        listeners.remove(l)
+    }
+
+    /**
+     * Dispatches an event to all registered listeners (snapshot copy for safety).
+     */
+    private inline fun notifyListeners(action: PlaybackListener.() -> Unit) {
+        listeners.toList().forEach { it.action() }
+    }
 
     interface PlaybackListener {
         fun onPlaybackStateChanged(isPlaying: Boolean)
@@ -69,7 +90,7 @@ class PlaybackManager(private val context: Context) {
                 if (playOnFocusGain) {
                     exoPlayer?.play()
                     isPlaying = true
-                    listener?.onPlaybackStateChanged(true)
+                    notifyListeners { onPlaybackStateChanged(true) }
                     playOnFocusGain = false
                 }
             }
@@ -123,11 +144,11 @@ class PlaybackManager(private val context: Context) {
     private val playerListener = object : Player.Listener {
         override fun onIsPlayingChanged(playing: Boolean) {
             isPlaying = playing
-            listener?.onPlaybackStateChanged(playing)
+            notifyListeners { onPlaybackStateChanged(playing) }
 
             // Update diagnostics stats
             if (playing) {
-                DiagnosticsService.Stats.totalTracksPlayed++
+                DiagnosticsService.Stats.totalTracksPlayed.incrementAndGet()
                 getCurrentTrack()?.let {
                     DiagnosticsService.Stats.currentTrackInfo = "${it.title} - ${it.artist}"
                 }
@@ -141,8 +162,8 @@ class PlaybackManager(private val context: Context) {
             // Update current index based on ExoPlayer's current media item index
             val player = exoPlayer ?: return
             currentIndex = player.currentMediaItemIndex
-            listener?.onTrackChanged(getCurrentTrack())
-            listener?.onQueueChanged(_queue, currentIndex)
+            notifyListeners { onTrackChanged(getCurrentTrack()) }
+            notifyListeners { onQueueChanged(_queue, currentIndex) }
         }
 
         override fun onPlaybackStateChanged(playbackState: Int) {
@@ -150,11 +171,11 @@ class PlaybackManager(private val context: Context) {
                 Player.STATE_ENDED -> {
                     Log.d(TAG, "Playback ended")
                     isPlaying = false
-                    listener?.onPlaybackStateChanged(false)
+                    notifyListeners { onPlaybackStateChanged(false) }
                 }
                 Player.STATE_READY -> {
                     val player = exoPlayer ?: return
-                    listener?.onPositionChanged(player.currentPosition, player.duration)
+                    notifyListeners { onPositionChanged(player.currentPosition, player.duration) }
                 }
             }
         }
@@ -186,11 +207,11 @@ class PlaybackManager(private val context: Context) {
         if (requestAudioFocus()) {
             player.play()
             isPlaying = true
-            listener?.onPlaybackStateChanged(true)
+            notifyListeners { onPlaybackStateChanged(true) }
         }
 
-        listener?.onQueueChanged(_queue, currentIndex)
-        listener?.onTrackChanged(getCurrentTrack())
+        notifyListeners { onQueueChanged(_queue, currentIndex) }
+        notifyListeners { onTrackChanged(getCurrentTrack()) }
     }
 
     /**
@@ -203,7 +224,7 @@ class PlaybackManager(private val context: Context) {
             .setMediaId(track.id.toString())
             .build()
         exoPlayer?.addMediaItem(exoItem)
-        listener?.onQueueChanged(_queue, currentIndex)
+        notifyListeners { onQueueChanged(_queue, currentIndex) }
     }
 
     // ── Transport Controls ────────────────────────────────────────
@@ -213,28 +234,28 @@ class PlaybackManager(private val context: Context) {
         if (requestAudioFocus()) {
             player.play()
             isPlaying = true
-            listener?.onPlaybackStateChanged(true)
+            notifyListeners { onPlaybackStateChanged(true) }
         }
     }
 
     fun pause() {
         exoPlayer?.pause()
         isPlaying = false
-        listener?.onPlaybackStateChanged(false)
+        notifyListeners { onPlaybackStateChanged(false) }
     }
 
     fun stop() {
         exoPlayer?.stop()
         isPlaying = false
         abandonAudioFocus()
-        listener?.onPlaybackStateChanged(false)
+        notifyListeners { onPlaybackStateChanged(false) }
     }
 
     fun skipToNext() {
         val player = exoPlayer ?: return
         if (player.hasNextMediaItem()) {
             player.seekToNextMediaItem()
-            DiagnosticsService.Stats.totalSkips++
+            DiagnosticsService.Stats.totalSkips.incrementAndGet()
         }
     }
 
@@ -266,7 +287,7 @@ class PlaybackManager(private val context: Context) {
     fun toggleShuffle() {
         shuffleEnabled = !shuffleEnabled
         exoPlayer?.shuffleModeEnabled = shuffleEnabled
-        listener?.onShuffleChanged(shuffleEnabled)
+        notifyListeners { onShuffleChanged(shuffleEnabled) }
     }
 
     fun cycleRepeatMode() {
@@ -280,7 +301,7 @@ class PlaybackManager(private val context: Context) {
             RepeatMode.ONE -> Player.REPEAT_MODE_ONE
             RepeatMode.ALL -> Player.REPEAT_MODE_ALL
         }
-        listener?.onRepeatModeChanged(repeatMode)
+        notifyListeners { onRepeatModeChanged(repeatMode) }
     }
 
     // ── Getters ───────────────────────────────────────────────────
