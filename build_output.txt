@@ -1,0 +1,223 @@
+﻿> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:compileDebugAidl UP-TO-DATE
+> Task :app:checkKotlinGradlePluginConfigurationErrors
+> Task :app:dataBindingMergeDependencyArtifactsDebug UP-TO-DATE
+> Task :app:generateDebugResValues UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:processDebugNavigationResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:dataBindingGenBaseClassesDebug UP-TO-DATE
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:compileDebugNavigationResources UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :app:processDebugMainManifest UP-TO-DATE
+> Task :app:processDebugManifest UP-TO-DATE
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+> Task :app:processDebugResources UP-TO-DATE
+> Task :app:kspDebugKotlin UP-TO-DATE
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :app:mergeDebugShaders UP-TO-DATE
+> Task :app:compileDebugShaders NO-SOURCE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:mergeDebugAssets UP-TO-DATE
+> Task :app:compressDebugAssets UP-TO-DATE
+> Task :app:checkDebugDuplicateClasses UP-TO-DATE
+> Task :app:desugarDebugFileDependencies UP-TO-DATE
+> Task :app:mergeExtDexDebug UP-TO-DATE
+> Task :app:mergeLibDexDebug UP-TO-DATE
+> Task :app:mergeDebugJniLibFolders UP-TO-DATE
+> Task :app:mergeDebugNativeLibs NO-SOURCE
+> Task :app:stripDebugDebugSymbols NO-SOURCE
+> Task :app:validateSigningDebug UP-TO-DATE
+> Task :app:writeDebugAppMetadata UP-TO-DATE
+> Task :app:writeDebugSigningConfigVersions UP-TO-DATE
+
+> Task :app:compileDebugKotlin FAILED
+.\gradlew.bat : e: file:///D:/MockP
+roject/app/src/main/java/com/anhvt8
+6/mediacenter/ui/browse/BrowseAdapt
+er.kt:19:31 Unresolved reference: 
+BrowseItem
+At line:1 char:1
++ .\gradlew.bat assembleDebug 2>&1 
+| Out-File -FilePath 
+"D:\MockProject ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotS 
+   pecified: (e: file:///D:/M...n  
+  ce: BrowseItem:String) [], Rem   
+ oteException
+    + FullyQualifiedErrorId : Nati 
+   veCommandError
+ 
+e: file:///D:/MockProject/app/src/m
+ain/java/com/anhvt86/mediacenter/ui
+/browse/BrowseAdapter.kt:20:5 None 
+of the following functions can be 
+called with the arguments 
+supplied: 
+protected/*protected and package*/ 
+constructor ListAdapter<T : Any!, 
+VH : androidx.recyclerview.widget.R
+ecyclerView.ViewHolder!>(p0: 
+AsyncDifferConfig<[Error type: 
+Unresolved type for BrowseItem]!>) 
+defined in androidx.recyclerview.wi
+dget.ListAdapter
+protected/*protected and package*/ 
+constructor ListAdapter<T : Any!, 
+VH : androidx.recyclerview.widget.R
+ecyclerView.ViewHolder!>(p0: 
+DiffUtil.ItemCallback<[Error type: 
+Unresolved type for BrowseItem]!>) 
+defined in androidx.recyclerview.wi
+dget.ListAdapter
+e: file:///D:/MockProject/app/src/m
+ain/java/com/anhvt86/mediacenter/ui
+/browse/BrowseAdapter.kt:20:17 
+Unresolved reference: BrowseItem
+e: file:///D:/MockProject/app/src/m
+ain/java/com/anhvt86/mediacenter/ui
+/browse/BrowseAdapter.kt:37:24 
+Unresolved reference: BrowseItem
+e: file:///D:/MockProject/app/src/m
+ain/java/com/anhvt86/mediacenter/ui
+/browse/BrowseAdapter.kt:45:17 
+Unresolved reference: BrowseItem
+e: file:///D:/MockProject/app/src/m
+ain/java/com/anhvt86/mediacenter/ui
+/browse/BrowseAdapter.kt:59:17 
+Unresolved reference: BrowseItem
+e: file:///D:/MockProject/app/src/m
+ain/java/com/anhvt86/mediacenter/ui
+/browse/BrowseAdapter.kt:67:34 
+Unresolved reference: BrowseItem
+e: file:///D:/MockProject/app/src/m
+ain/java/com/anhvt86/mediacenter/ui
+/browse/BrowseAdapter.kt:73:49 
+Unresolved reference: BrowseItem
+e: file:///D:/MockProject/app/src/m
+ain/java/com/anhvt86/mediacenter/ui
+/browse/BrowseAdapter.kt:74:47 
+Unresolved reference: BrowseItem
+e: file:///D:/MockProject/app/src/m
+ain/java/com/anhvt86/mediacenter/ui
+/browse/BrowseAdapter.kt:74:68 
+Unresolved reference: BrowseItem
+e: file:///D:/MockProject/app/src/m
+ain/java/com/anhvt86/mediacenter/ui
+/browse/BrowseAdapter.kt:77:50 
+Unresolved reference: BrowseItem
+e: file:///D:/MockProject/app/src/m
+ain/java/com/anhvt86/mediacenter/ui
+/browse/BrowseAdapter.kt:77:71 
+Unresolved reference: BrowseItem
+e: file:///D:/MockProject/app/src/m
+ain/java/com/anhvt86/mediacenter/ui
+/browse/BrowseFragment.kt:59:35 
+Cannot infer a type for this 
+parameter. Please specify it 
+explicitly.
+e: file:///D:/MockProject/app/src/m
+ain/java/com/anhvt86/mediacenter/ui
+/browse/BrowseFragment.kt:109:21 
+Unresolved reference: BrowseItem
+e: file:///D:/MockProject/app/src/m
+ain/java/com/anhvt86/mediacenter/ui
+/browse/BrowseFragment.kt:110:41 
+Unresolved reference: BrowseItem
+e: file:///D:/MockProject/app/src/m
+ain/java/com/anhvt86/mediacenter/ui
+/browse/BrowseFragment.kt:119:21 
+Unresolved reference: BrowseItem
+e: file:///D:/MockProject/app/src/m
+ain/java/com/anhvt86/mediacenter/ui
+/browse/BrowseFragment.kt:119:61 
+Unresolved reference: BrowseItem
+e: file:///D:/MockProject/app/src/m
+ain/java/com/anhvt86/mediacenter/ui
+/browse/BrowseFragment.kt:128:21 
+Unresolved reference: BrowseItem
+e: file:///D:/MockProject/app/src/m
+ain/java/com/anhvt86/mediacenter/ui
+/browse/BrowseFragment.kt:128:62 
+Unresolved reference: BrowseItem
+e: file:///D:/MockProject/app/src/m
+ain/java/com/anhvt86/mediacenter/ui
+/browse/BrowseFragment.kt:160:37 
+Unresolved reference: BrowseItem
+e: file:///D:/MockProject/app/src/m
+ain/java/com/anhvt86/mediacenter/ui
+/browse/BrowseFragment.kt:169:29 
+Unresolved reference: BrowseItem
+e: file:///D:/MockProject/app/src/m
+ain/java/com/anhvt86/mediacenter/ui
+/browse/BrowseFragment.kt:170:49 
+Unresolved reference: BrowseItem
+e: file:///D:/MockProject/app/src/m
+ain/java/com/anhvt86/mediacenter/ui
+/browse/BrowseFragment.kt:183:29 
+Unresolved reference: BrowseItem
+e: file:///D:/MockProject/app/src/m
+ain/java/com/anhvt86/mediacenter/ui
+/browse/BrowseFragment.kt:184:79 
+Unresolved reference: BrowseItem
+e: file:///D:/MockProject/app/src/m
+ain/java/com/anhvt86/mediacenter/ui
+/browse/BrowseFragment.kt:190:26 
+Unresolved reference: BrowseItem
+e: file:///D:/MockProject/app/src/m
+ain/java/com/anhvt86/mediacenter/ui
+/search/SearchFragment.kt:18:42 
+Unresolved reference: BrowseItem
+e: file:///D:/MockProject/app/src/m
+ain/java/com/anhvt86/mediacenter/ui
+/search/SearchFragment.kt:58:35 
+Cannot infer a type for this 
+parameter. Please specify it 
+explicitly.
+e: file:///D:/MockProject/app/src/m
+ain/java/com/anhvt86/mediacenter/ui
+/search/SearchFragment.kt:59:30 
+Unresolved reference: BrowseItem
+e: file:///D:/MockProject/app/src/m
+ain/java/com/anhvt86/mediacenter/ui
+/search/SearchFragment.kt:104:17 
+Unresolved reference: BrowseItem
+e: file:///D:/MockProject/app/src/m
+ain/java/com/anhvt86/mediacenter/ui
+/search/SearchFragment.kt:109:28 
+Unresolved reference: BrowseItem
+
+FAILURE: Build failed with an 
+exception.
+
+* What went wrong:
+Execution failed for task 
+':app:compileDebugKotlin'.
+> A failure occurred while 
+executing org.jetbrains.kotlin.comp
+ilerRunner.GradleCompilerRunnerWith
+Workers$GradleKotlinCompilerWorkAct
+ion
+   > Compilation error. See log 
+for more details
+
+* Try:
+> Run with --stacktrace option to 
+get the stack trace.
+> Run with --info or --debug 
+option to get more log output.
+> Run with --scan to get full 
+insights.
+> Get more help at 
+https://help.gradle.org.
+
+BUILD FAILED in 4s
+33 actionable tasks: 2 executed, 31 up-to-date

@@ -1,22 +1,105 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
+<LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:orientation="vertical"
     android:background="@color/background_dark"
     tools:context=".ui.MainActivity">
 
-    <!-- Fragment container for Browse / NowPlaying screens -->
+    <!-- Main content area -->
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/fragment_container"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="0dp"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        android:layout_weight="1" />
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+    <!-- Mini Player Bar (persistent at bottom, matching design) -->
+    <LinearLayout
+        android:id="@+id/mini_player"
+        android:layout_width="match_parent"
+        android:layout_height="72dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="@dimen/spacing_md"
+        android:background="@color/surface_variant"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <!-- Album Art -->
+        <ImageView
+            android:id="@+id/mini_player_art"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:scaleType="centerCrop"
+            android:contentDescription="Album Art"
+            tools:src="@drawable/ic_launcher_foreground" />
+
+        <!-- Track Info -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:paddingHorizontal="@dimen/spacing_md">
+
+            <TextView
+                android:id="@+id/mini_player_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/text_primary"
+                android:textSize="@dimen/text_body"
+                android:textStyle="bold"
+                android:ellipsize="end"
+                android:maxLines="1"
+                tools:text="Instant Crush" />
+
+            <TextView
+                android:id="@+id/mini_player_artist"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/text_secondary"
+                android:textSize="@dimen/text_caption"
+                android:ellipsize="end"
+                android:maxLines="1"
+                tools:text="Daft Punk" />
+
+        </LinearLayout>
+
+        <!-- Playback Controls -->
+        <ImageButton
+            android:id="@+id/mini_player_prev"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@android:drawable/ic_media_previous"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/skip_previous"
+            android:scaleType="centerInside"
+            app:tint="@color/text_primary" />
+
+        <ImageButton
+            android:id="@+id/mini_player_play_pause"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:src="@android:drawable/ic_media_play"
+            android:background="@drawable/bg_play_button"
+            android:contentDescription="@string/play"
+            android:scaleType="centerInside"
+            app:tint="@color/text_on_primary" />
+
+        <ImageButton
+            android:id="@+id/mini_player_next"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@android:drawable/ic_media_next"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/skip_next"
+            android:scaleType="centerInside"
+            app:tint="@color/text_primary" />
+
+    </LinearLayout>
+
+</LinearLayout>

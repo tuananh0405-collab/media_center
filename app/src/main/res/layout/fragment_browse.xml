@@ -8,21 +8,21 @@
     android:background="@color/background_dark"
     tools:context=".ui.browse.BrowseFragment">
 
-    <!-- Header Bar -->
+    <!-- Header: "Multimedia" title + Search icon -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingHorizontal="@dimen/spacing_md"
-        android:paddingVertical="@dimen/spacing_sm"
-        android:background="@color/surface_dark">
+        android:paddingHorizontal="@dimen/spacing_lg"
+        android:paddingVertical="@dimen/spacing_md">
 
+        <!-- Back button (hidden at root level) -->
         <ImageButton
             android:id="@+id/btn_back"
             android:layout_width="@dimen/touch_target_min"
             android:layout_height="@dimen/touch_target_min"
-            android:src="@android:drawable/ic_media_previous"
+            android:src="@android:drawable/ic_menu_revert"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="Back"
             android:visibility="gone"
@@ -34,29 +34,53 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="@string/app_name"
+            android:text="Multimedia"
             android:textColor="@color/text_primary"
             android:textSize="@dimen/text_title"
-            android:textStyle="bold"
-            android:paddingStart="@dimen/spacing_sm"
-            android:paddingEnd="@dimen/spacing_sm" />
+            android:textStyle="bold" />
+
+        <!-- Search icon -->
+        <ImageButton
+            android:id="@+id/btn_search"
+            android:layout_width="@dimen/touch_target_min"
+            android:layout_height="@dimen/touch_target_min"
+            android:src="@android:drawable/ic_menu_search"
+            android:background="@drawable/bg_category_card"
+            android:contentDescription="Search"
+            android:scaleType="centerInside"
+            android:padding="@dimen/spacing_md" />
 
     </LinearLayout>
 
-    <!-- Divider -->
-    <View
+    <!-- Category Cards (horizontal scroll - shown at root level) -->
+    <HorizontalScrollView
+        android:id="@+id/category_scroll"
         android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="@color/divider" />
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:scrollbars="none"
+        android:paddingHorizontal="@dimen/spacing_md"
+        android:clipToPadding="false">
 
-    <!-- Media List -->
+        <LinearLayout
+            android:id="@+id/category_container"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingVertical="@dimen/spacing_md" />
+
+    </HorizontalScrollView>
+
+    <!-- List view (shown when drilling into a category) -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recycler_browse"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
         android:clipToPadding="false"
-        android:paddingVertical="@dimen/spacing_sm" />
+        android:paddingVertical="@dimen/spacing_sm"
+        android:visibility="gone" />
 
     <!-- Empty State -->
     <TextView
@@ -69,6 +93,6 @@
         android:textColor="@color/text_tertiary"
         android:textSize="@dimen/text_subtitle"
         android:visibility="gone"
-        tools:visibility="visible" />
+        tools:visibility="gone" />
 
 </LinearLayout>

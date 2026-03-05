@@ -29,6 +29,9 @@
     <color name="divider">#1AFAFAFA</color>
     <color name="ripple_color">#2600D4AA</color>
 
+    <!-- Album Art -->
+    <color name="album_art_placeholder">#FF2A2A3E</color>
+
     <!-- Status Colors -->
     <color name="error">#FFCF6679</color>
     <color name="warning">#FFFFAB40</color>

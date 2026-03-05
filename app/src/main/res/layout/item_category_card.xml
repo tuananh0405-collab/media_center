@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Category card item for the horizontal scroll (Albums, Artists, Playlists, All Songs) -->
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="220dp"
+    android:layout_height="180dp"
+    android:layout_marginEnd="@dimen/spacing_md"
+    android:foreground="?attr/selectableItemBackground">
+
+    <!-- Cover Image -->
+    <ImageView
+        android:id="@+id/image_category"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:contentDescription="Category"
+        android:background="@drawable/bg_category_card"
+        android:clipToOutline="true"
+        tools:src="@drawable/ic_launcher_foreground" />
+
+    <!-- Gradient overlay at bottom for text readability -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:layout_gravity="bottom"
+        android:background="@drawable/bg_gradient_bottom" />
+
+    <!-- Category label -->
+    <TextView
+        android:id="@+id/text_category_name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|start"
+        android:layout_margin="@dimen/spacing_md"
+        android:textColor="@color/text_primary"
+        android:textSize="@dimen/text_subtitle"
+        android:textStyle="bold"
+        tools:text="Albums" />
+
+</FrameLayout>

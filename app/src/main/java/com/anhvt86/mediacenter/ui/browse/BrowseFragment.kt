@@ -4,16 +4,22 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
+import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.anhvt86.mediacenter.MediaCenterApp
+import com.anhvt86.mediacenter.R
 import com.anhvt86.mediacenter.databinding.FragmentBrowseBinding
+import com.anhvt86.mediacenter.service.MusicService
+import com.anhvt86.mediacenter.ui.nowplaying.NowPlayingFragment
+import com.anhvt86.mediacenter.ui.search.SearchFragment
 
 /**
- * Browse screen fragment.
- * Displays media library categories (Albums, Artists, All Songs) and individual tracks.
- * Follows the AAOS distraction-compliance guidelines.
+ * Browse screen matching the design mockup.
+ * - Root level: horizontal scrolling category cards (Albums, Artists, Playlists, All Songs)
+ * - Drill-down: vertical list of albums/artists/tracks
  */
 class BrowseFragment : Fragment() {
 
@@ -23,13 +29,10 @@ class BrowseFragment : Fragment() {
     private lateinit var viewModel: BrowseViewModel
     private lateinit var adapter: BrowseAdapter
 
-    // Current browse level
     private var currentCategory: String? = null
 
     override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
+        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View {
         _binding = FragmentBrowseBinding.inflate(inflater, container, false)
         return binding.root
@@ -45,9 +48,10 @@ class BrowseFragment : Fragment() {
         )[BrowseViewModel::class.java]
 
         setupRecyclerView()
+        setupCategoryCards()
+        setupButtons()
         observeData()
 
-        // Start at root level — show categories
         showCategories()
     }
 
@@ -61,20 +65,50 @@ class BrowseFragment : Fragment() {
         }
     }
 
+    private fun setupCategoryCards() {
+        val categories = listOf(
+            CategoryInfo("ALBUMS", getString(R.string.category_albums)),
+            CategoryInfo("ARTISTS", getString(R.string.category_artists)),
+            CategoryInfo("PLAYLISTS", getString(R.string.category_playlists)),
+            CategoryInfo("ALL_SONGS", getString(R.string.category_all_songs))
+        )
+
+        val container = binding.categoryContainer
+        container.removeAllViews()
+
+        for (cat in categories) {
+            val cardView = LayoutInflater.from(requireContext())
+                .inflate(R.layout.item_category_card, container, false)
+
+            cardView.findViewById<TextView>(R.id.text_category_name).text = cat.title
+            // Category images will be placeholder for now (dark card)
+            cardView.setOnClickListener {
+                navigateToCategory(cat.id)
+            }
+            container.addView(cardView)
+        }
+    }
+
+    private fun setupButtons() {
+        binding.btnBack.setOnClickListener {
+            showCategories()
+        }
+
+        binding.btnSearch.setOnClickListener {
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.fragment_container, SearchFragment())
+                .addToBackStack(null)
+                .commit()
+        }
+    }
+
     private fun observeData() {
-        // Observe all songs for when "All Songs" category is selected
         viewModel.allSongs.observe(viewLifecycleOwner) { songs ->
             if (currentCategory == "ALL_SONGS") {
                 adapter.submitList(songs.map {
-                    BrowseItem(
-                        id = it.id.toString(),
-                        title = it.title,
-                        subtitle = "${it.artist} • ${it.album}",
-                        imageUri = it.albumArtUri,
-                        type = BrowseItem.Type.TRACK
-                    )
+                    BrowseItem(it.id.toString(), it.title, "${it.artist} • ${it.album}",
+                        it.albumArtUri, BrowseItem.Type.TRACK)
                 })
-                binding.textTitle.text = getString(com.anhvt86.mediacenter.R.string.category_all_songs)
                 updateEmptyState(songs.isEmpty())
             }
         }
@@ -82,15 +116,8 @@ class BrowseFragment : Fragment() {
         viewModel.albums.observe(viewLifecycleOwner) { albums ->
             if (currentCategory == "ALBUMS") {
                 adapter.submitList(albums.map {
-                    BrowseItem(
-                        id = "ALBUM:$it",
-                        title = it,
-                        subtitle = null,
-                        imageUri = null,
-                        type = BrowseItem.Type.CATEGORY
-                    )
+                    BrowseItem("ALBUM:$it", it, null, null, BrowseItem.Type.CATEGORY)
                 })
-                binding.textTitle.text = getString(com.anhvt86.mediacenter.R.string.category_albums)
                 updateEmptyState(albums.isEmpty())
             }
         }
@@ -98,15 +125,8 @@ class BrowseFragment : Fragment() {
         viewModel.artists.observe(viewLifecycleOwner) { artists ->
             if (currentCategory == "ARTISTS") {
                 adapter.submitList(artists.map {
-                    BrowseItem(
-                        id = "ARTIST:$it",
-                        title = it,
-                        subtitle = null,
-                        imageUri = null,
-                        type = BrowseItem.Type.CATEGORY
-                    )
+                    BrowseItem("ARTIST:$it", it, null, null, BrowseItem.Type.CATEGORY)
                 })
-                binding.textTitle.text = getString(com.anhvt86.mediacenter.R.string.category_artists)
                 updateEmptyState(artists.isEmpty())
             }
         }
@@ -114,43 +134,40 @@ class BrowseFragment : Fragment() {
 
     private fun showCategories() {
         currentCategory = null
-        binding.textTitle.text = getString(com.anhvt86.mediacenter.R.string.app_name)
+        binding.textTitle.text = "Multimedia"
         binding.btnBack.visibility = View.GONE
+        binding.btnSearch.visibility = View.VISIBLE
+        binding.categoryScroll.visibility = View.VISIBLE
+        binding.recyclerBrowse.visibility = View.GONE
+        binding.textEmpty.visibility = View.GONE
+    }
 
-        val categories = listOf(
-            BrowseItem("ALBUMS", getString(com.anhvt86.mediacenter.R.string.category_albums), null, null, BrowseItem.Type.CATEGORY),
-            BrowseItem("ARTISTS", getString(com.anhvt86.mediacenter.R.string.category_artists), null, null, BrowseItem.Type.CATEGORY),
-            BrowseItem("ALL_SONGS", getString(com.anhvt86.mediacenter.R.string.category_all_songs), null, null, BrowseItem.Type.CATEGORY),
-        )
-        adapter.submitList(categories)
-        updateEmptyState(false)
+    private fun navigateToCategory(categoryId: String) {
+        currentCategory = categoryId
+        binding.btnBack.visibility = View.VISIBLE
+        binding.btnSearch.visibility = View.GONE
+        binding.categoryScroll.visibility = View.GONE
+        binding.recyclerBrowse.visibility = View.VISIBLE
+
+        when (categoryId) {
+            "ALBUMS" -> binding.textTitle.text = getString(R.string.category_albums)
+            "ARTISTS" -> binding.textTitle.text = getString(R.string.category_artists)
+            "ALL_SONGS" -> binding.textTitle.text = getString(R.string.category_all_songs)
+            "PLAYLISTS" -> binding.textTitle.text = getString(R.string.category_playlists)
+        }
     }
 
     private fun onItemClicked(item: BrowseItem) {
         when {
-            // Root category clicked
-            item.id == "ALBUMS" -> {
-                currentCategory = "ALBUMS"
-                binding.btnBack.visibility = View.VISIBLE
-            }
-            item.id == "ARTISTS" -> {
-                currentCategory = "ARTISTS"
-                binding.btnBack.visibility = View.VISIBLE
-            }
-            item.id == "ALL_SONGS" -> {
-                currentCategory = "ALL_SONGS"
-                binding.btnBack.visibility = View.VISIBLE
-            }
-            // Album/Artist sub-category clicked
             item.id.startsWith("ALBUM:") -> {
                 val albumName = item.id.removePrefix("ALBUM:")
                 currentCategory = "ALBUM_DETAIL"
                 binding.textTitle.text = albumName
-                binding.btnBack.visibility = View.VISIBLE
                 viewModel.getSongsByAlbum(albumName).observe(viewLifecycleOwner) { songs ->
                     if (currentCategory == "ALBUM_DETAIL") {
                         adapter.submitList(songs.map {
-                            BrowseItem(it.id.toString(), it.title, it.artist, it.albumArtUri, BrowseItem.Type.TRACK)
+                            BrowseItem(it.id.toString(), it.title, it.artist,
+                                it.albumArtUri, BrowseItem.Type.TRACK)
                         })
                         updateEmptyState(songs.isEmpty())
                     }
@@ -160,19 +177,29 @@ class BrowseFragment : Fragment() {
                 val artistName = item.id.removePrefix("ARTIST:")
                 currentCategory = "ARTIST_DETAIL"
                 binding.textTitle.text = artistName
-                binding.btnBack.visibility = View.VISIBLE
                 viewModel.getSongsByArtist(artistName).observe(viewLifecycleOwner) { songs ->
                     if (currentCategory == "ARTIST_DETAIL") {
                         adapter.submitList(songs.map {
-                            BrowseItem(it.id.toString(), it.title, "${it.artist} • ${it.album}", it.albumArtUri, BrowseItem.Type.TRACK)
+                            BrowseItem(it.id.toString(), it.title,
+                                "${it.artist} • ${it.album}", it.albumArtUri, BrowseItem.Type.TRACK)
                         })
                         updateEmptyState(songs.isEmpty())
                     }
                 }
             }
-            // Track clicked — TODO: navigate to Now Playing (Step 4)
             item.type == BrowseItem.Type.TRACK -> {
-                // Placeholder: will play track in Step 4
+                // Play the track and navigate to Now Playing
+                val pm = MusicService.instance?.playbackManager ?: return
+                viewModel.allSongs.value?.let { songs ->
+                    val index = songs.indexOfFirst { it.id.toString() == item.id }
+                    if (index >= 0) {
+                        pm.setQueueAndPlay(songs, index)
+                        parentFragmentManager.beginTransaction()
+                            .replace(R.id.fragment_container, NowPlayingFragment())
+                            .addToBackStack(null)
+                            .commit()
+                    }
+                }
             }
         }
     }
@@ -186,17 +213,6 @@ class BrowseFragment : Fragment() {
         super.onDestroyView()
         _binding = null
     }
-}
 
-/**
- * Data class representing an item in the browse list.
- */
-data class BrowseItem(
-    val id: String,
-    val title: String,
-    val subtitle: String?,
-    val imageUri: String?,
-    val type: Type
-) {
-    enum class Type { CATEGORY, TRACK }
+    private data class CategoryInfo(val id: String, val title: String)
 }
