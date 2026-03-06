@@ -2,6 +2,7 @@
 <resources>
     <!-- Automotive touch target minimums (AAOS distraction compliance) -->
     <dimen name="touch_target_min">76dp</dimen>
+    <dimen name="touch_target_min_card">130dp</dimen>
 
     <!-- Spacing -->
     <dimen name="spacing_xs">4dp</dimen>
@@ -14,8 +15,8 @@
     <!-- Text sizes (automotive-optimized: larger for readability at distance) -->
     <dimen name="text_title">24sp</dimen>
     <dimen name="text_subtitle">18sp</dimen>
-    <dimen name="text_body">16sp</dimen>
-    <dimen name="text_caption">14sp</dimen>
+    <dimen name="text_body">28sp</dimen>
+    <dimen name="text_caption">20sp</dimen>
 
     <!-- Album Art Sizes -->
     <dimen name="album_art_small">64dp</dimen>

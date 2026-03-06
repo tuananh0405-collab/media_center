@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">MediaCenter</string>
+    <string name="app_name">Media Center</string>
 
     <!-- Browse Categories -->
     <string name="category_albums">Albums</string>

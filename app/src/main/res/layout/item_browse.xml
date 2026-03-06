@@ -14,16 +14,16 @@
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="@dimen/touch_target_min"
+        android:layout_height="@dimen/touch_target_min_card"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingHorizontal="@dimen/spacing_md">
+        android:paddingHorizontal="@dimen/spacing_lg">
 
         <!-- Album Art (for tracks) -->
         <ImageView
             android:id="@+id/image_art"
-            android:layout_width="@dimen/album_art_small"
-            android:layout_height="@dimen/album_art_small"
+            android:layout_width="@dimen/album_art_medium"
+            android:layout_height="@dimen/album_art_medium"
             android:scaleType="centerCrop"
             android:visibility="gone"
             android:contentDescription="Album Art"
@@ -47,7 +47,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:orientation="vertical"
-            android:paddingHorizontal="@dimen/spacing_md">
+            android:paddingHorizontal="@dimen/spacing_lg">
 
             <TextView
                 android:id="@+id/text_title"
