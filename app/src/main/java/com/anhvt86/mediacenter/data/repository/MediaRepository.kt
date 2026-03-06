@@ -55,6 +55,7 @@ class MediaRepository(context: Context) {
 
     // ── Playlists ──────────────────────────────────────────────────
     fun getAllPlaylists(): LiveData<List<Playlist>> = playlistDao.getAllPlaylists()
+    suspend fun getAllPlaylistsList(): List<Playlist> = playlistDao.getAllPlaylistsList()
     suspend fun createPlaylist(name: String): Long =
         playlistDao.insertPlaylist(Playlist(name = name))
     suspend fun deletePlaylist(playlist: Playlist) = playlistDao.deletePlaylist(playlist)
@@ -64,6 +65,8 @@ class MediaRepository(context: Context) {
         playlistDao.removeTrackFromPlaylist(PlaylistTrackCrossRef(playlistId, mediaItemId))
     fun getTracksInPlaylist(playlistId: Long): LiveData<List<MediaItem>> =
         playlistDao.getTracksInPlaylist(playlistId)
+    suspend fun getTracksInPlaylistList(playlistId: Long): List<MediaItem> =
+        playlistDao.getTracksInPlaylistList(playlistId)
 
     // ── Media Fetching (API) ───────────────────────────────────────
 

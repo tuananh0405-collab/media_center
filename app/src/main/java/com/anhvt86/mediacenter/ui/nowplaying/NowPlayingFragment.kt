@@ -13,8 +13,10 @@ import android.view.ViewGroup
 import android.widget.SeekBar
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import com.anhvt86.mediacenter.R
 import com.anhvt86.mediacenter.databinding.FragmentNowPlayingBinding
 import com.anhvt86.mediacenter.ui.MediaBrowserViewModel
+import com.anhvt86.mediacenter.ui.queue.QueueFragment
 import com.bumptech.glide.Glide
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -97,6 +99,13 @@ class NowPlayingFragment : Fragment() {
         binding.btnRepeat.setOnClickListener {
             mediaBrowserVm.mediaController.value?.transportControls
                 ?.sendCustomAction("CYCLE_REPEAT", null)
+        }
+
+        binding.btnQueue.setOnClickListener {
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.fragment_container, QueueFragment())
+                .addToBackStack(null)
+                .commit()
         }
     }
 

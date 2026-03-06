@@ -16,6 +16,9 @@
     <string name="shuffle">Shuffle</string>
     <string name="repeat">Repeat</string>
     <string name="stop">Stop</string>
+    <string name="play_queue">Play Queue</string>
+    <string name="queue_hint">Drag to reorder • Swipe left to remove</string>
+    <string name="queue_empty">Queue is empty</string>
 
     <!-- Search -->
     <string name="search_hint">Search songs, albums, artists…</string>

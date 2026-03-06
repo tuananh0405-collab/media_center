@@ -34,6 +34,9 @@ class PlaybackManager(private val context: Context) {
     val queue: List<MediaItem> get() = _queue
     private var currentIndex: Int = -1
 
+    // ── Play-time tracking for DiagnosticsService ─────────────────
+    private var playStartTimestamp: Long = 0L
+
     // ── State ─────────────────────────────────────────────────────
     var isPlaying: Boolean = false
         private set
@@ -146,12 +149,13 @@ class PlaybackManager(private val context: Context) {
             isPlaying = playing
             notifyListeners { onPlaybackStateChanged(playing) }
 
-            // Update diagnostics stats
+            // Track cumulative play time for diagnostics
             if (playing) {
-                DiagnosticsService.Stats.totalTracksPlayed.incrementAndGet()
-                getCurrentTrack()?.let {
-                    DiagnosticsService.Stats.currentTrackInfo = "${it.title} - ${it.artist}"
-                }
+                playStartTimestamp = System.currentTimeMillis()
+            } else if (playStartTimestamp > 0L) {
+                val elapsed = System.currentTimeMillis() - playStartTimestamp
+                DiagnosticsService.Stats.totalPlayTimeMs.addAndGet(elapsed)
+                playStartTimestamp = 0L
             }
         }
 
@@ -162,6 +166,13 @@ class PlaybackManager(private val context: Context) {
             // Update current index based on ExoPlayer's current media item index
             val player = exoPlayer ?: return
             currentIndex = player.currentMediaItemIndex
+
+            // Track-changed diagnostics: increment count + update current info
+            DiagnosticsService.Stats.totalTracksPlayed.incrementAndGet()
+            getCurrentTrack()?.let {
+                DiagnosticsService.Stats.currentTrackInfo = "${it.title} - ${it.artist}"
+            }
+
             notifyListeners { onTrackChanged(getCurrentTrack()) }
             notifyListeners { onQueueChanged(_queue, currentIndex) }
         }
@@ -178,6 +189,13 @@ class PlaybackManager(private val context: Context) {
                     notifyListeners { onPositionChanged(player.currentPosition, player.duration) }
                 }
             }
+        }
+
+        override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+            Log.e(TAG, "ExoPlayer error: ${error.message}")
+            DiagnosticsService.Stats.addError(
+                "[${System.currentTimeMillis()}] ${error.errorCodeName}: ${error.message}"
+            )
         }
     }
 
@@ -227,6 +245,45 @@ class PlaybackManager(private val context: Context) {
         notifyListeners { onQueueChanged(_queue, currentIndex) }
     }
 
+    /**
+     * Move a queue item from one position to another (drag-to-reorder).
+     * Keeps ExoPlayer's internal playlist in sync.
+     */
+    fun moveQueueItem(fromIndex: Int, toIndex: Int) {
+        if (fromIndex !in _queue.indices || toIndex !in _queue.indices) return
+        val item = _queue.removeAt(fromIndex)
+        _queue.add(toIndex, item)
+        exoPlayer?.moveMediaItem(fromIndex, toIndex)
+
+        // Adjust currentIndex to follow the currently playing track
+        currentIndex = when {
+            currentIndex == fromIndex -> toIndex
+            fromIndex < currentIndex && toIndex >= currentIndex -> currentIndex - 1
+            fromIndex > currentIndex && toIndex <= currentIndex -> currentIndex + 1
+            else -> currentIndex
+        }
+        notifyListeners { onQueueChanged(_queue, currentIndex) }
+    }
+
+    /**
+     * Remove a track from the queue at the given position (swipe-to-remove).
+     */
+    fun removeFromQueue(index: Int) {
+        if (index !in _queue.indices) return
+        _queue.removeAt(index)
+        exoPlayer?.removeMediaItem(index)
+
+        // Adjust currentIndex
+        when {
+            index < currentIndex -> currentIndex--
+            index == currentIndex -> {
+                // Currently playing track was removed; ExoPlayer auto-advances
+                if (currentIndex >= _queue.size) currentIndex = _queue.size - 1
+            }
+        }
+        notifyListeners { onQueueChanged(_queue, currentIndex) }
+    }
+
     // ── Transport Controls ────────────────────────────────────────
 
     fun play() {
@@ -266,6 +323,7 @@ class PlaybackManager(private val context: Context) {
             player.seekTo(0)
         } else if (player.hasPreviousMediaItem()) {
             player.seekToPreviousMediaItem()
+            DiagnosticsService.Stats.totalSkips.incrementAndGet()
         }
     }
 

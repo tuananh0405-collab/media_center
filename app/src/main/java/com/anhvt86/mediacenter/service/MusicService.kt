@@ -273,11 +273,16 @@ class MusicService : MediaBrowserServiceCompat() {
                 BrowseTree.ALBUMS_ID -> buildAlbumItems()
                 BrowseTree.ARTISTS_ID -> buildArtistItems()
                 BrowseTree.ALL_SONGS_ID -> buildAllSongItems()
+                BrowseTree.PLAYLISTS_ID -> buildPlaylistItems()
                 else -> when {
                     parentId.startsWith(BrowseTree.ALBUM_PREFIX) ->
                         buildSongsForAlbum(BrowseTree.parseName(parentId))
                     parentId.startsWith(BrowseTree.ARTIST_PREFIX) ->
                         buildSongsForArtist(BrowseTree.parseName(parentId))
+                    parentId.startsWith(BrowseTree.PLAYLIST_PREFIX) -> {
+                        val playlistId = BrowseTree.parseName(parentId).toLongOrNull() ?: return@withContext emptyList()
+                        buildSongsForPlaylist(playlistId)
+                    }
                     else -> emptyList()
                 }
             }
@@ -313,11 +318,23 @@ class MusicService : MediaBrowserServiceCompat() {
     private suspend fun buildAllSongItems(): List<MediaBrowserCompat.MediaItem> =
         repository.getAllSongsList().map { it.toBrowserMediaItem() }
 
+    private suspend fun buildPlaylistItems(): List<MediaBrowserCompat.MediaItem> =
+        repository.getAllPlaylistsList().map { playlist ->
+            val description = MediaDescriptionCompat.Builder()
+                .setMediaId("${BrowseTree.PLAYLIST_PREFIX}${playlist.id}")
+                .setTitle(playlist.name)
+                .build()
+            MediaBrowserCompat.MediaItem(description, MediaBrowserCompat.MediaItem.FLAG_BROWSABLE)
+        }
+
     private suspend fun buildSongsForAlbum(album: String): List<MediaBrowserCompat.MediaItem> =
         repository.getSongsByAlbumList(album).map { it.toBrowserMediaItem() }
 
     private suspend fun buildSongsForArtist(artist: String): List<MediaBrowserCompat.MediaItem> =
         repository.getSongsByArtistList(artist).map { it.toBrowserMediaItem() }
+
+    private suspend fun buildSongsForPlaylist(playlistId: Long): List<MediaBrowserCompat.MediaItem> =
+        repository.getTracksInPlaylistList(playlistId).map { it.toBrowserMediaItem() }
 
     private fun MediaItem.toBrowserMediaItem(): MediaBrowserCompat.MediaItem {
         val description = MediaDescriptionCompat.Builder()
