@@ -7,16 +7,18 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.ViewModelProvider
+import androidx.fragment.app.activityViewModels
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.anhvt86.mediacenter.MediaCenterApp
 import com.anhvt86.mediacenter.R
 import com.anhvt86.mediacenter.databinding.FragmentSearchBinding
-import com.anhvt86.mediacenter.service.MusicService
+import com.anhvt86.mediacenter.service.BrowseTree
+import com.anhvt86.mediacenter.ui.MediaBrowserViewModel
 import com.anhvt86.mediacenter.ui.browse.BrowseAdapter
 import com.anhvt86.mediacenter.ui.browse.BrowseItem
 import com.anhvt86.mediacenter.ui.browse.BrowseViewModel
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -28,14 +30,15 @@ import kotlinx.coroutines.launch
  * Uses debounced search (300ms) and a single switchMap-based observer
  * to prevent LiveData leaks and excessive queries.
  */
+@AndroidEntryPoint
 class SearchFragment : Fragment() {
 
     private var _binding: FragmentSearchBinding? = null
     private val binding get() = _binding!!
 
-    private lateinit var viewModel: BrowseViewModel
+    private val viewModel: BrowseViewModel by viewModels()
     private lateinit var adapter: BrowseAdapter
-
+    private val mediaBrowserVm: MediaBrowserViewModel by activityViewModels()
     private var searchJob: Job? = null
 
     override fun onCreateView(
@@ -47,12 +50,6 @@ class SearchFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        val app = requireActivity().application as MediaCenterApp
-        viewModel = ViewModelProvider(
-            this,
-            BrowseViewModel.Factory(app.repository)
-        )[BrowseViewModel::class.java]
 
         setupRecyclerView()
         setupSearchInput()
@@ -66,13 +63,12 @@ class SearchFragment : Fragment() {
     private fun setupRecyclerView() {
         adapter = BrowseAdapter { item ->
             if (item.type == BrowseItem.Type.TRACK) {
-                // Play the track using cached allSongs value (no new observer!)
-                val pm = MusicService.instance?.playbackManager ?: return@BrowseAdapter
-                val songs = viewModel.allSongs.value ?: return@BrowseAdapter
-                val index = songs.indexOfFirst { it.id.toString() == item.id }
-                if (index >= 0) {
-                    pm.setQueueAndPlay(songs, index)
-                }
+                // Route through MediaSession — no direct PlaybackManager call
+                val controller = mediaBrowserVm.mediaController.value ?: return@BrowseAdapter
+                controller.transportControls.playFromMediaId(
+                    "${BrowseTree.TRACK_PREFIX}${item.id}",
+                    null
+                )
             }
         }
         binding.recyclerResults.apply {

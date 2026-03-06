@@ -6,14 +6,15 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.ViewModelProvider
+import androidx.fragment.app.activityViewModels
+import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.anhvt86.mediacenter.MediaCenterApp
 import com.anhvt86.mediacenter.R
 import com.anhvt86.mediacenter.databinding.FragmentBrowseBinding
-import com.anhvt86.mediacenter.service.MusicService
+import com.anhvt86.mediacenter.ui.MediaBrowserViewModel
 import com.anhvt86.mediacenter.ui.nowplaying.NowPlayingFragment
 import com.anhvt86.mediacenter.ui.search.SearchFragment
+import dagger.hilt.android.AndroidEntryPoint
 
 /**
  * Browse screen matching the design mockup.
@@ -27,14 +28,15 @@ import com.anhvt86.mediacenter.ui.search.SearchFragment
  * Observers are registered ONCE in observeData() and react to ViewModel state changes,
  * preventing LiveData observer leaks.
  */
+@AndroidEntryPoint
 class BrowseFragment : Fragment() {
 
     private var _binding: FragmentBrowseBinding? = null
     private val binding get() = _binding!!
 
-    private lateinit var viewModel: BrowseViewModel
+    private val viewModel: BrowseViewModel by viewModels()
     private lateinit var adapter: BrowseAdapter
-
+    private val mediaBrowserVm: MediaBrowserViewModel by activityViewModels()
     private var currentCategory: String? = null
 
     override fun onCreateView(
@@ -46,12 +48,6 @@ class BrowseFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        val app = requireActivity().application as MediaCenterApp
-        viewModel = ViewModelProvider(
-            this,
-            BrowseViewModel.Factory(app.repository)
-        )[BrowseViewModel::class.java]
 
         setupRecyclerView()
         setupCategoryCards()
@@ -236,11 +232,14 @@ class BrowseFragment : Fragment() {
                 viewModel.selectArtist(artistName)
             }
             item.type == BrowseItem.Type.TRACK -> {
-                val pm = MusicService.instance?.playbackManager ?: return
+                val controller = mediaBrowserVm.mediaController.value ?: return
                 viewModel.allSongs.value?.let { songs ->
                     val index = songs.indexOfFirst { it.id.toString() == item.id }
                     if (index >= 0) {
-                        pm.setQueueAndPlay(songs, index)
+                        controller.transportControls.playFromMediaId(
+                            "${com.anhvt86.mediacenter.service.BrowseTree.TRACK_PREFIX}${songs[index].id}",
+                            null
+                        )
                         parentFragmentManager.beginTransaction()
                             .replace(R.id.fragment_container, NowPlayingFragment())
                             .addToBackStack(null)

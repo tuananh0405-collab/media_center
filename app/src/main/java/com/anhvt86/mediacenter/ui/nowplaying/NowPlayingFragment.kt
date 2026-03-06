@@ -4,26 +4,35 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.support.v4.media.MediaMetadataCompat
+import android.support.v4.media.session.MediaControllerCompat
+import android.support.v4.media.session.PlaybackStateCompat
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.SeekBar
 import androidx.fragment.app.Fragment
-import com.anhvt86.mediacenter.data.local.entity.MediaItem
+import androidx.fragment.app.activityViewModels
 import com.anhvt86.mediacenter.databinding.FragmentNowPlayingBinding
-import com.anhvt86.mediacenter.service.MusicService
-import com.anhvt86.mediacenter.service.PlaybackManager
+import com.anhvt86.mediacenter.ui.MediaBrowserViewModel
 import com.bumptech.glide.Glide
+import dagger.hilt.android.AndroidEntryPoint
 
 /**
  * Now Playing fragment displaying the currently playing track with
  * large album art, track info, seek bar, and playback controls.
  * Matches the automotive-optimized landscape design.
+ *
+ * Commands go through MediaControllerCompat.transportControls.
+ * UI state driven by MediaBrowserViewModel (metadata + playbackState LiveData).
  */
+@AndroidEntryPoint
 class NowPlayingFragment : Fragment() {
 
     private var _binding: FragmentNowPlayingBinding? = null
     private val binding get() = _binding!!
+
+    private val mediaBrowserVm: MediaBrowserViewModel by activityViewModels()
 
     private val handler = Handler(Looper.getMainLooper())
     private var isUserSeeking = false
@@ -45,23 +54,19 @@ class NowPlayingFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
         setupControls()
         setupSeekBar()
-        updateUI()
+        observePlaybackState()
     }
 
     override fun onResume() {
         super.onResume()
         handler.post(positionUpdater)
-        // Register listener for state changes
-        MusicService.instance?.playbackManager?.addPlaybackListener(playbackListener)
     }
 
     override fun onPause() {
         super.onPause()
         handler.removeCallbacks(positionUpdater)
-        MusicService.instance?.playbackManager?.removePlaybackListener(playbackListener)
     }
 
     private fun setupControls() {
@@ -70,24 +75,28 @@ class NowPlayingFragment : Fragment() {
         }
 
         binding.btnPlayPause.setOnClickListener {
-            val pm = MusicService.instance?.playbackManager ?: return@setOnClickListener
-            if (pm.isPlaying) pm.pause() else pm.play()
+            val ctrl = mediaBrowserVm.mediaController.value ?: return@setOnClickListener
+            val state = mediaBrowserVm.playbackState.value?.state
+            if (state == PlaybackStateCompat.STATE_PLAYING) ctrl.transportControls.pause()
+            else ctrl.transportControls.play()
         }
 
         binding.btnNext.setOnClickListener {
-            MusicService.instance?.playbackManager?.skipToNext()
+            mediaBrowserVm.mediaController.value?.transportControls?.skipToNext()
         }
 
         binding.btnPrev.setOnClickListener {
-            MusicService.instance?.playbackManager?.skipToPrevious()
+            mediaBrowserVm.mediaController.value?.transportControls?.skipToPrevious()
         }
 
         binding.btnShuffle.setOnClickListener {
-            MusicService.instance?.playbackManager?.toggleShuffle()
+            mediaBrowserVm.mediaController.value?.transportControls
+                ?.sendCustomAction("TOGGLE_SHUFFLE", null)
         }
 
         binding.btnRepeat.setOnClickListener {
-            MusicService.instance?.playbackManager?.cycleRepeatMode()
+            mediaBrowserVm.mediaController.value?.transportControls
+                ?.sendCustomAction("CYCLE_REPEAT", null)
         }
     }
 
@@ -95,8 +104,9 @@ class NowPlayingFragment : Fragment() {
         binding.seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 if (fromUser) {
-                    val pm = MusicService.instance?.playbackManager ?: return
-                    val position = (progress.toLong() * pm.getDuration()) / 1000
+                    val duration = mediaBrowserVm.nowPlaying.value
+                        ?.getLong(MediaMetadataCompat.METADATA_KEY_DURATION) ?: 0L
+                    val position = (progress.toLong() * duration) / 1000
                     binding.textPosition.text = formatTime(position)
                 }
             }
@@ -107,37 +117,46 @@ class NowPlayingFragment : Fragment() {
 
             override fun onStopTrackingTouch(seekBar: SeekBar?) {
                 isUserSeeking = false
-                val pm = MusicService.instance?.playbackManager ?: return
+                val duration = mediaBrowserVm.nowPlaying.value
+                    ?.getLong(MediaMetadataCompat.METADATA_KEY_DURATION) ?: 0L
                 val progress = seekBar?.progress ?: return
-                val position = (progress.toLong() * pm.getDuration()) / 1000
-                pm.seekTo(position)
+                val position = (progress.toLong() * duration) / 1000
+                mediaBrowserVm.mediaController.value?.transportControls?.seekTo(position)
             }
         })
     }
 
-    private fun updateUI() {
-        val pm = MusicService.instance?.playbackManager ?: return
-        val track = pm.getCurrentTrack()
+    private fun observePlaybackState() {
+        // Track metadata → update title, artist, album art
+        mediaBrowserVm.nowPlaying.observe(viewLifecycleOwner) { metadata ->
+            updateTrackInfo(metadata)
+        }
 
-        updateTrackInfo(track)
-        updatePlayPauseButton(pm.isPlaying)
-        updateShuffleButton(pm.shuffleEnabled)
-        updateRepeatButton(pm.repeatMode)
+        // Playback state → update play/pause button
+        mediaBrowserVm.playbackState.observe(viewLifecycleOwner) { state ->
+            val isPlaying = state?.state == PlaybackStateCompat.STATE_PLAYING
+            updatePlayPauseButton(isPlaying)
+        }
     }
 
-    private fun updateTrackInfo(track: MediaItem?) {
-        if (track == null) {
+    private fun updateTrackInfo(metadata: MediaMetadataCompat?) {
+        if (metadata == null) {
             binding.textTrackTitle.text = "No track selected"
             binding.textTrackArtistAlbum.text = ""
             return
         }
 
-        binding.textTrackTitle.text = track.title
-        binding.textTrackArtistAlbum.text = "${track.artist} — ${track.album}"
+        binding.textTrackTitle.text = metadata.getText(MediaMetadataCompat.METADATA_KEY_TITLE)
+        binding.textTrackArtistAlbum.text = buildString {
+            append(metadata.getText(MediaMetadataCompat.METADATA_KEY_ARTIST) ?: "")
+            append(" — ")
+            append(metadata.getText(MediaMetadataCompat.METADATA_KEY_ALBUM) ?: "")
+        }
 
-        track.albumArtUri?.let { uri ->
+        val artUri = metadata.getString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI)
+        if (artUri != null) {
             Glide.with(this)
-                .load(Uri.parse(uri))
+                .load(Uri.parse(artUri))
                 .centerCrop()
                 .into(binding.imageAlbumArt)
         }
@@ -145,10 +164,10 @@ class NowPlayingFragment : Fragment() {
 
     private fun updatePosition() {
         if (isUserSeeking) return
-        val pm = MusicService.instance?.playbackManager ?: return
-
-        val position = pm.getCurrentPosition()
-        val duration = pm.getDuration()
+        val ctrl = mediaBrowserVm.mediaController.value ?: return
+        val position = ctrl.playbackState?.position ?: 0L
+        val duration = mediaBrowserVm.nowPlaying.value
+            ?.getLong(MediaMetadataCompat.METADATA_KEY_DURATION) ?: 0L
 
         binding.textPosition.text = formatTime(position)
         binding.textDuration.text = formatTime(duration)
@@ -165,50 +184,12 @@ class NowPlayingFragment : Fragment() {
         )
     }
 
-    private fun updateShuffleButton(enabled: Boolean) {
-        binding.btnShuffle.alpha = if (enabled) 1.0f else 0.5f
-    }
-
-    private fun updateRepeatButton(mode: PlaybackManager.RepeatMode) {
-        binding.btnRepeat.alpha = when (mode) {
-            PlaybackManager.RepeatMode.OFF -> 0.5f
-            PlaybackManager.RepeatMode.ONE -> 1.0f
-            PlaybackManager.RepeatMode.ALL -> 1.0f
-        }
-    }
-
     private fun formatTime(ms: Long): String {
         if (ms <= 0) return "0:00"
         val totalSeconds = ms / 1000
         val minutes = totalSeconds / 60
         val seconds = totalSeconds % 60
         return "$minutes:%02d".format(seconds)
-    }
-
-    // ── Playback Listener ─────────────────────────────────────────
-
-    private val playbackListener = object : PlaybackManager.PlaybackListener {
-        override fun onPlaybackStateChanged(isPlaying: Boolean) {
-            activity?.runOnUiThread { updatePlayPauseButton(isPlaying) }
-        }
-
-        override fun onTrackChanged(track: MediaItem?) {
-            activity?.runOnUiThread { updateTrackInfo(track) }
-        }
-
-        override fun onPositionChanged(position: Long, duration: Long) {
-            // Handled by polling
-        }
-
-        override fun onQueueChanged(queue: List<MediaItem>, currentIndex: Int) {}
-
-        override fun onShuffleChanged(enabled: Boolean) {
-            activity?.runOnUiThread { updateShuffleButton(enabled) }
-        }
-
-        override fun onRepeatModeChanged(mode: PlaybackManager.RepeatMode) {
-            activity?.runOnUiThread { updateRepeatButton(mode) }
-        }
     }
 
     override fun onDestroyView() {

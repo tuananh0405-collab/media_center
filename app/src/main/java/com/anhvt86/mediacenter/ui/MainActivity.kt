@@ -1,26 +1,28 @@
 package com.anhvt86.mediacenter.ui
 
-import android.content.ComponentName
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.support.v4.media.session.PlaybackStateCompat
 import android.util.Log
 import android.view.View
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import com.anhvt86.mediacenter.MediaCenterApp
 import com.anhvt86.mediacenter.R
-import com.anhvt86.mediacenter.data.local.entity.MediaItem
 import com.anhvt86.mediacenter.databinding.ActivityMainBinding
 import com.anhvt86.mediacenter.service.MusicService
-import com.anhvt86.mediacenter.service.PlaybackManager
 import com.anhvt86.mediacenter.ui.browse.BrowseFragment
 import com.anhvt86.mediacenter.ui.nowplaying.NowPlayingFragment
 import com.bumptech.glide.Glide
+import dagger.hilt.android.AndroidEntryPoint
 
 /**
  * Main entry point for the AAOS Multimedia Center.
  * Hosts fragment navigation and the persistent mini-player bar at the bottom.
+ *
+ * Connects to MusicService via MediaBrowserViewModel (no more static singleton).
  */
+@AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
     companion object {
@@ -29,12 +31,15 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
 
+    // Shared ViewModel that holds the MediaBrowserCompat / MediaControllerCompat connection
+    private val mediaBrowserVm: MediaBrowserViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Start MusicService (which triggers the API fetch internally)
+        // Start MusicService so it runs even if no client is bound
         startService(Intent(this, MusicService::class.java))
 
         if (savedInstanceState == null) {
@@ -44,35 +49,28 @@ class MainActivity : AppCompatActivity() {
         }
 
         setupMiniPlayer()
-    }
-
-    override fun onResume() {
-        super.onResume()
-        // Register for playback state updates to update mini-player
-        MusicService.instance?.playbackManager?.addPlaybackListener(miniPlayerListener)
-        updateMiniPlayer()
-    }
-
-    override fun onPause() {
-        super.onPause()
-        MusicService.instance?.playbackManager?.removePlaybackListener(miniPlayerListener)
+        observePlaybackState()
     }
 
     private fun setupMiniPlayer() {
         binding.miniPlayerPlayPause.setOnClickListener {
-            val pm = MusicService.instance?.playbackManager ?: return@setOnClickListener
-            if (pm.isPlaying) pm.pause() else pm.play()
+            val controller = mediaBrowserVm.mediaController.value ?: return@setOnClickListener
+            val state = mediaBrowserVm.playbackState.value?.state
+            if (state == PlaybackStateCompat.STATE_PLAYING) {
+                controller.transportControls.pause()
+            } else {
+                controller.transportControls.play()
+            }
         }
 
         binding.miniPlayerPrev.setOnClickListener {
-            MusicService.instance?.playbackManager?.skipToPrevious()
+            mediaBrowserVm.mediaController.value?.transportControls?.skipToPrevious()
         }
 
         binding.miniPlayerNext.setOnClickListener {
-            MusicService.instance?.playbackManager?.skipToNext()
+            mediaBrowserVm.mediaController.value?.transportControls?.skipToNext()
         }
 
-        // Tap on mini-player (not on controls) opens Now Playing
         binding.miniPlayer.setOnClickListener {
             supportFragmentManager.beginTransaction()
                 .replace(R.id.fragment_container, NowPlayingFragment())
@@ -81,49 +79,39 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun updateMiniPlayer() {
-        val pm = MusicService.instance?.playbackManager
-        val track = pm?.getCurrentTrack()
+    private fun observePlaybackState() {
+        // Update mini-player when track metadata changes
+        mediaBrowserVm.nowPlaying.observe(this) { metadata ->
+            if (metadata != null) {
+                binding.miniPlayer.visibility = View.VISIBLE
+                binding.miniPlayerTitle.text =
+                    metadata.getText(android.support.v4.media.MediaMetadataCompat.METADATA_KEY_TITLE)
+                binding.miniPlayerArtist.text =
+                    metadata.getText(android.support.v4.media.MediaMetadataCompat.METADATA_KEY_ARTIST)
 
-        if (track != null) {
-            binding.miniPlayer.visibility = View.VISIBLE
-            binding.miniPlayerTitle.text = track.title
-            binding.miniPlayerArtist.text = track.artist
-
-            track.albumArtUri?.let { uri ->
-                Glide.with(this)
-                    .load(Uri.parse(uri))
-                    .centerCrop()
-                    .into(binding.miniPlayerArt)
+                val artUri = metadata.getString(
+                    android.support.v4.media.MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI
+                )
+                if (artUri != null) {
+                    Glide.with(this)
+                        .load(Uri.parse(artUri))
+                        .centerCrop()
+                        .into(binding.miniPlayerArt)
+                }
+            } else {
+                binding.miniPlayer.visibility = View.GONE
             }
-
-            updateMiniPlayerPlayButton(pm.isPlaying)
-        } else {
-            binding.miniPlayer.visibility = View.GONE
-        }
-    }
-
-    private fun updateMiniPlayerPlayButton(isPlaying: Boolean) {
-        binding.miniPlayerPlayPause.setImageResource(
-            if (isPlaying) android.R.drawable.ic_media_pause
-            else android.R.drawable.ic_media_play
-        )
-    }
-
-    // ── Mini Player Listener ──────────────────────────────────────
-
-    private val miniPlayerListener = object : PlaybackManager.PlaybackListener {
-        override fun onPlaybackStateChanged(isPlaying: Boolean) {
-            runOnUiThread { updateMiniPlayerPlayButton(isPlaying) }
         }
 
-        override fun onTrackChanged(track: MediaItem?) {
-            runOnUiThread { updateMiniPlayer() }
+        // Update play/pause button icon based on state
+        mediaBrowserVm.playbackState.observe(this) { state ->
+            val isPlaying = state?.state == PlaybackStateCompat.STATE_PLAYING
+            binding.miniPlayerPlayPause.setImageResource(
+                if (isPlaying) android.R.drawable.ic_media_pause
+                else android.R.drawable.ic_media_play
+            )
         }
 
-        override fun onPositionChanged(position: Long, duration: Long) {}
-        override fun onQueueChanged(queue: List<MediaItem>, currentIndex: Int) {}
-        override fun onShuffleChanged(enabled: Boolean) {}
-        override fun onRepeatModeChanged(mode: PlaybackManager.RepeatMode) {}
+        Log.d(TAG, "Observing playback state")
     }
 }
